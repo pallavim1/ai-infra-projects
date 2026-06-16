@@ -1,0 +1,151 @@
+apiVersion: networking.gke.io/v1
+kind: GKENetworkParamSet
+metadata:
+  name: vpc-gpunet-1
+spec:
+  vpc: a3-mega-h100-cluster-gpunet-0
+  vpcSubnet: pallaviam-tcpx-subnet-1
+---
+apiVersion: networking.gke.io/v1
+kind: Network
+metadata:
+  name: vpc-gpunet-1
+spec:
+  type: Device
+  parametersRef:
+    group: networking.gke.io
+    kind: GKENetworkParamSet
+    name: vpc-gpunet-1
+---
+apiVersion: networking.gke.io/v1
+kind: GKENetworkParamSet
+metadata:
+  name: vpc-gpunet-2
+spec:
+  vpc: a3-mega-h100-cluster-gpunet-0
+  vpcSubnet: pallaviam-tcpx-subnet-2
+---
+apiVersion: networking.gke.io/v1
+kind: Network
+metadata:
+  name: vpc-gpunet-2
+spec:
+  type: Device
+  parametersRef:
+    group: networking.gke.io
+    kind: GKENetworkParamSet
+    name: vpc-gpunet-2
+---
+apiVersion: networking.gke.io/v1
+kind: GKENetworkParamSet
+metadata:
+  name: vpc-gpunet-3
+spec:
+  vpc: a3-mega-h100-cluster-gpunet-0
+  vpcSubnet: pallaviam-tcpx-subnet-3
+---
+apiVersion: networking.gke.io/v1
+kind: Network
+metadata:
+  name: vpc-gpunet-3
+spec:
+  type: Device
+  parametersRef:
+    group: networking.gke.io
+    kind: GKENetworkParamSet
+    name: vpc-gpunet-3
+---
+apiVersion: networking.gke.io/v1
+kind: GKENetworkParamSet
+metadata:
+  name: vpc-gpunet-4
+spec:
+  vpc: a3-mega-h100-cluster-gpunet-0
+  vpcSubnet: pallaviam-tcpx-subnet-4
+---
+apiVersion: networking.gke.io/v1
+kind: Network
+metadata:
+  name: vpc-gpunet-4
+spec:
+  type: Device
+  parametersRef:
+    group: networking.gke.io
+    kind: GKENetworkParamSet
+    name: vpc-gpunet-4
+---
+apiVersion: networking.gke.io/v1
+kind: GKENetworkParamSet
+metadata:
+  name: vpc-gpunet-5
+spec:
+  vpc: a3-mega-h100-cluster-gpunet-0
+  vpcSubnet: pallaviam-tcpx-subnet-5
+---
+apiVersion: networking.gke.io/v1
+kind: Network
+metadata:
+  name: vpc-gpunet-5
+spec:
+  type: Device
+  parametersRef:
+    group: networking.gke.io
+    kind: GKENetworkParamSet
+    name: vpc-gpunet-5
+---
+apiVersion: networking.gke.io/v1
+kind: GKENetworkParamSet
+metadata:
+  name: vpc-gpunet-6
+spec:
+  vpc: a3-mega-h100-cluster-gpunet-0
+  vpcSubnet: pallaviam-tcpx-subnet-6
+---
+apiVersion: networking.gke.io/v1
+kind: Network
+metadata:
+  name: vpc-gpunet-6
+spec:
+  type: Device
+  parametersRef:
+    group: networking.gke.io
+    kind: GKENetworkParamSet
+    name: vpc-gpunet-6
+---
+apiVersion: networking.gke.io/v1
+kind: GKENetworkParamSet
+metadata:
+  name: vpc-gpunet-7
+spec:
+  vpc: a3-mega-h100-cluster-gpunet-0
+  vpcSubnet: pallaviam-tcpx-subnet-7
+---
+apiVersion: networking.gke.io/v1
+kind: Network
+metadata:
+  name: vpc-gpunet-7
+spec:
+  type: Device
+  parametersRef:
+    group: networking.gke.io
+    kind: GKENetworkParamSet
+    name: vpc-gpunet-7
+---
+apiVersion: networking.gke.io/v1
+kind: GKENetworkParamSet
+metadata:
+  name: vpc-gpunet-8
+spec:
+  vpc: a3-mega-h100-cluster-gpunet-0
+  vpcSubnet: pallaviam-tcpx-subnet-8
+---
+apiVersion: networking.gke.io/v1
+kind: Network
+metadata:
+  name: vpc-gpunet-8
+spec:
+  type: Device
+  parametersRef:
+    group: networking.gke.io
+    kind: GKENetworkParamSet
+    name: vpc-gpunet-8

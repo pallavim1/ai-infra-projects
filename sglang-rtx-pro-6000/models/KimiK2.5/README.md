@@ -1,0 +1,44 @@
+# Kimi-K2.5 on GCP G4
+
+Optimized configurations and benchmarks for [Moonshot AI's Kimi-K2.5](https://huggingface.co/moonshotai/Kimi-K2.5) on GCP G4 instances using SGLang.
+
+## Model Overview
+Kimi-K2.5 is a large-scale Mixture-of-Experts (MoE) model designed for high-performance reasoning and tool use.
+
+## Serving Configuration
+
+### Native INT4 (2-Node Setup)
+- **Model**: `moonshotai/Kimi-K2.5`
+- **Tensor Parallelism**: 8
+- **Pipeline Parallelism**: 2
+- **Quantization**: Native INT4
+- **KV Cache**: FP8 (e5m2)
+- **Serving Image**: `lmsysorg/sglang:v0.5.10.post1`
+
+### NVFP4 (2-Node Setup)
+- **Model**: `nvidia/Kimi-K2.5-NVFP4`
+- **Parallelism**: Tensor Parallel (TP) 8, Pipeline Parallel (PP) 2, Data Parallel (DP) 8
+- **Quantization**: `modelopt_fp4`
+- **KV Cache**: `bfloat16`
+- **Serving Image**: `lmsysorg/sglang:dev-cu13`
+
+The configuration uses specialized reasoning and tool-call parsers optimized for Kimi's architecture.
+
+## Benchmark Results
+The following benchmarks were conducted on a cluster of 2x `g4-standard-384` instances (16x RTX PRO 6000 Blackwell GPUs).
+
+| Metric | Native INT4 (2-node) | NVFP4 (2-node) |
+|--------|----------------------|----------------|
+| Output Throughput | 3152.79 tok/s | 3237.46 tok/s |
+| Total Throughput | 3537.39 tok/s | 3632.39 tok/s |
+| Peak Output Throughput | 4793.00 tok/s | 5535.00 tok/s |
+| Mean TPOT | 136.52 ms | 137.89 ms |
+| Median TTFT | 300.83 ms | 304.01 ms |
+
+**Attribution**: Final benchmark numbers and optimization tuning provided by **Karim Roukoz**.
+
+## Usage
+To deploy Kimi-K2.5, apply the `sglang-ss.yaml` manifest:
+```bash
+kubectl apply -f sglang-ss.yaml
+```

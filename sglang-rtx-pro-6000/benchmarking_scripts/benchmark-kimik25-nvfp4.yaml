@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sglang-kimik25-nvfp4-benchmark
+  namespace: default
+spec:
+  nodeSelector:
+    workload: benchmark-client
+  restartPolicy: Never
+  volumes:
+  - name: workspace-volume
+    emptyDir: {}
+  containers:
+  - name: benchmark
+    image: docker.io/lmsysorg/sglang:v0.5.10.post1
+    volumeMounts:
+    - name: workspace-volume
+      mountPath: /workspace
+    env:
+    - name: HF_TOKEN
+      valueFrom:
+          secretKeyRef:
+            name: hf-secret
+            key: HF_TOKEN
+    command:
+    - /bin/bash
+    - -c
+    args:
+    - |
+      echo "Starting SGLang 512-Concurrency Benchmark for Kimi-K2.5-NVFP4..."
+      
+      API_URL="http://sglang-serving-nvfp4:8000"
+      MODEL_NAME="nvidia/Kimi-K2.5-NVFP4"
+      CONCURRENCY=512
+      INPUT_LEN=1024
+      OUTPUT_LEN=8192
+      NUM_PROMPTS=1536
+
+      python3 -m sglang.bench_serving \
+          --backend sglang-oai \
+          --base-url $API_URL \
+          --model $MODEL_NAME \
+          --tokenizer $MODEL_NAME \
+          --dataset-name random \
+          --random-input-len $INPUT_LEN \
+          --random-output-len $OUTPUT_LEN \
+          --num-prompts $NUM_PROMPTS \
+          --max-concurrency $CONCURRENCY \
+          --output-file /workspace/results_kimik25_nvfp4.json \
+          --apply-chat-template
+
+      echo "Sleeping so you can extract the results manually if needed..."
+      sleep infinity
