@@ -44,7 +44,7 @@ spec:
       API_URL="http://sglang-serving-on-master:8000"
       MODEL_NAME="/models"
       TOKENIZER_NAME="/models"
-      CONCURRENCY=256
+      CONCURRENCY=512
       INPUT_LEN=1024
       OUTPUT_LEN=8192
       NUM_PROMPTS=1536
