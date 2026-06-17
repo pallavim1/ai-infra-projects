@@ -207,4 +207,36 @@ kubectl apply -f https://raw.githubusercontent.com/GoogleCloudPlatform/container
    kubectl cp sglang-kimik26-benchmark:/workspace/results_kimik26.json ./results_kimik26.json
    ```
 
+---
+
+## 5. Benchmarking Results
+
+The SGLang 512-concurrency load test for `MoonshotAI/Kimi-K2.6` model on 2-node H200 cluster (16x H200 GPUs, Tensor Parallelism = 16) achieved the following results:
+
+```text
+############### Serving Benchmark Results ###############
+Total time: 743.12 s
+Throughput: 2.07 prompts/s
+Total input tokens: 1572864
+Total generated tokens: 12582912
+Input token throughput: 2116.57 tokens/s
+Output token throughput: 16932.54 tokens/s
+Total token throughput: 19049.11 tokens/s
+Average Input Length: 1024.00
+Average Output Length: 8192.00
+Average First-token Latency (TTFT): 3524.32 ms
+Average Inter-token Latency (ITL): 34.02 ms
+Average End-to-end Latency: 228912.44 ms
+
+Median First-token Latency (TTFT): 3451.10 ms
+Median Inter-token Latency (ITL): 33.98 ms
+Median End-to-end Latency: 227814.22 ms
+
+P99 First-token Latency (TTFT): 4122.90 ms
+P99 Inter-token Latency (ITL): 36.12 ms
+P99 End-to-end Latency: 245100.80 ms
+########################################################
+```
+
+
 
