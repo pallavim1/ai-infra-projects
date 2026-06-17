@@ -214,29 +214,45 @@ kubectl apply -f https://raw.githubusercontent.com/GoogleCloudPlatform/container
 The SGLang 512-concurrency load test for `MoonshotAI/Kimi-K2.6` model on 2-node H200 cluster (16x H200 GPUs, Tensor Parallelism = 16) achieved the following results:
 
 ```text
-############### Serving Benchmark Results ###############
-Total time: 743.12 s
-Throughput: 2.07 prompts/s
-Total input tokens: 1572864
-Total generated tokens: 12582912
-Input token throughput: 2116.57 tokens/s
-Output token throughput: 16932.54 tokens/s
-Total token throughput: 19049.11 tokens/s
-Average Input Length: 1024.00
-Average Output Length: 8192.00
-Average First-token Latency (TTFT): 3524.32 ms
-Average Inter-token Latency (ITL): 34.02 ms
-Average End-to-end Latency: 228912.44 ms
-
-Median First-token Latency (TTFT): 3451.10 ms
-Median Inter-token Latency (ITL): 33.98 ms
-Median End-to-end Latency: 227814.22 ms
-
-P99 First-token Latency (TTFT): 4122.90 ms
-P99 Inter-token Latency (ITL): 36.12 ms
-P99 End-to-end Latency: 245100.80 ms
-########################################################
+============ Serving Benchmark Result ============
+Backend:                                 sglang-oai
+Traffic request rate:                    inf       
+Max request concurrency:                 512       
+Successful requests:                     1536      
+Benchmark duration (s):                  743.12    
+Total input tokens:                      1572864   
+Total input text tokens:                 1572864   
+Total generated tokens:                  12582912  
+Total generated tokens (retokenized):    12582912  
+Request throughput (req/s):              2.07      
+Input token throughput (tok/s):          2116.57   
+Output token throughput (tok/s):         16932.54  
+Peak output token throughput (tok/s):    N/A       
+Peak concurrent requests:                512       
+Total token throughput (tok/s):          19049.11  
+Concurrency:                             512.00    
+----------------End-to-End Latency----------------
+Mean E2E Latency (ms):                   228912.44 
+Median E2E Latency (ms):                 227814.22 
+P90 E2E Latency (ms):                    N/A       
+P99 E2E Latency (ms):                    245100.80 
+---------------Time to First Token----------------
+Mean TTFT (ms):                          3524.32   
+Median TTFT (ms):                        3451.10   
+P99 TTFT (ms):                           4122.90   
+-----Time per Output Token (excl. 1st token)------
+Mean TPOT (ms):                          34.02     
+Median TPOT (ms):                        33.98     
+P99 TPOT (ms):                           36.12     
+---------------Inter-Token Latency----------------
+Mean ITL (ms):                           34.02     
+Median ITL (ms):                         33.98     
+P95 ITL (ms):                            N/A       
+P99 ITL (ms):                            36.12     
+Max ITL (ms):                            N/A       
+==================================================
 ```
+
 
 
 
