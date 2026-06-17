@@ -80,10 +80,10 @@ spec:
               --dist-init-addr distributed-sglang-0.sglang-master-pod:5000 \
               --trust-remote-code \
               --kv-cache-dtype fp8_e5m2 \
-              --reasoning-parser kimi_k2 \
+               --reasoning-parser kimi_k2 \
               --tool-call-parser kimi_k2 \
-              --mem-fraction-static 0.75 \
-              --chunked-prefill-size 16384 \
+              --mem-fraction-static 0.88 \
+              --chunked-prefill-size 8192 \
               --host 0.0.0.0 
 
         env:

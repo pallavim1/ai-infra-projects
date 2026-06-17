@@ -209,50 +209,93 @@ kubectl apply -f https://raw.githubusercontent.com/GoogleCloudPlatform/container
 
 ---
 
-## 5. Benchmarking Results
+### 5. Benchmarking Results & Parameter Variations
 
-The SGLang 512-concurrency load test for `MoonshotAI/Kimi-K2.6` model on 2-node H200 cluster (16x H200 GPUs, Tensor Parallelism = 16) achieved the following results:
+To evaluate the H200's capacity and throughput potential, we ran three distinct configuration tests on the 2-node H200 cluster under identical load parameters (512 concurrency, 1536 prompts, 1024 input / 8192 output tokens):
 
+#### H200 Test Variations Configuration
+
+| Test Run | static_fraction | chunked_prefill_size | KV Cache Capacity (Tokens) | Status | Output Throughput |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Variation 1** (H100 Baseline Port) | `0.75` | `16384` | 3.36 Million | Completed | 3,448.71 tok/s |
+| **Variation 2** (H200 Optimized Capacity) | `0.88` | `16384` | **3.94 Million** | Completed | 3,302.12 tok/s |
+| **Variation 3** (Tuned Chunked Prefill) | `0.88` | **`8192`** | **3.94 Million** | Completed | **3,538.81 tok/s** |
+
+---
+
+### Step-by-Step Metrics Comparison
+
+Comparing the H100 cluster run (A3 Mega, 16x H100 GPUs) against the three H200 variations:
+
+| Metric | H100 Cluster | H200 Var 1 (Baseline) | H200 Var 2 (Capacity) | H200 Var 3 (Prefill Tuned) | Improvement (Var 3 vs H100) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Output Token Throughput** | 3,216.78 tok/s | 3,448.71 tok/s | 3,302.12 tok/s | **3,538.81 tok/s** | **+10.0%** |
+| **Total Token Throughput** | 3,609.18 tok/s | 3,869.40 tok/s | 3,705.10 tok/s | **3,970.50 tok/s** | **+10.0%** |
+| **Request Throughput** | 0.77 req/s | 0.82 req/s | 0.79 req/s | **0.84 req/s** | **+9.1%** |
+| **Mean End-to-End Latency** | 587.19 s | 549.21 s | 572.84 s | **539.18 s** | **-8.2% (Lower is better)** |
+| **Mean Time to First Token (TTFT)** | 177.36 s | 162.23 s | 184.21 s | **144.06 s** | **-18.8% (Lower is better)** |
+| **Mean Time per Output Token (TPOT)** | 105.86 ms | 98.91 ms | 100.82 ms | **101.60 ms** | **-4.0% (Lower is better)** |
+| **Mean Inter-Token Latency (ITL)** | 97.95 ms | 92.49 ms | 93.18 ms | **94.46 ms** | **-3.6% (Lower is better)** |
+
+---
+
+### Detailed Raw Logs
+
+#### Variation 3 Raw Metrics (`--mem-fraction-static 0.88`, `--chunked-prefill-size 8192`):
 ```text
 ============ Serving Benchmark Result ============
 Backend:                                 sglang-oai
 Traffic request rate:                    inf       
 Max request concurrency:                 512       
 Successful requests:                     1536      
-Benchmark duration (s):                  743.12    
-Total input tokens:                      1572864   
-Total input text tokens:                 1572864   
-Total generated tokens:                  12582912  
-Total generated tokens (retokenized):    12582912  
-Request throughput (req/s):              2.07      
-Input token throughput (tok/s):          2116.57   
-Output token throughput (tok/s):         16932.54  
-Peak output token throughput (tok/s):    N/A       
-Peak concurrent requests:                512       
-Total token throughput (tok/s):          19049.11  
-Concurrency:                             512.00    
+Benchmark duration (s):                  1818.37   
+Total input tokens:                      784969    
+Total input text tokens:                 784969    
+Total generated tokens:                  6434886   
+Total generated tokens (retokenized):    6429664   
+Request throughput (req/s):              0.84      
+Input token throughput (tok/s):          431.69    
+Output token throughput (tok/s):         3538.81   
+Peak output token throughput (tok/s):    4887.00   
+Peak concurrent requests:                517       
+Total token throughput (tok/s):          3970.50   
+Concurrency:                             455.45    
 ----------------End-to-End Latency----------------
-Mean E2E Latency (ms):                   228912.44 
-Median E2E Latency (ms):                 227814.22 
-P90 E2E Latency (ms):                    N/A       
-P99 E2E Latency (ms):                    245100.80 
+Mean E2E Latency (ms):                   539177.31 
+Median E2E Latency (ms):                 534495.80 
+P90 E2E Latency (ms):                    820893.36 
+P99 E2E Latency (ms):                    890864.10 
 ---------------Time to First Token----------------
-Mean TTFT (ms):                          3524.32   
-Median TTFT (ms):                        3451.10   
-P99 TTFT (ms):                           4122.90   
+Mean TTFT (ms):                          144060.34 
+Median TTFT (ms):                        202189.91 
+P99 TTFT (ms):                           259801.68 
 -----Time per Output Token (excl. 1st token)------
-Mean TPOT (ms):                          34.02     
-Median TPOT (ms):                        33.98     
-P99 TPOT (ms):                           36.12     
+Mean TPOT (ms):                          101.60    
+Median TPOT (ms):                        90.65     
+P99 TPOT (ms):                           160.21    
 ---------------Inter-Token Latency----------------
-Mean ITL (ms):                           34.02     
-Median ITL (ms):                         33.98     
-P95 ITL (ms):                            N/A       
-P99 ITL (ms):                            36.12     
-Max ITL (ms):                            N/A       
+Mean ITL (ms):                           94.46     
+Median ITL (ms):                         90.76     
+P95 ITL (ms):                            145.07    
+P99 ITL (ms):                            161.03    
+Max ITL (ms):                            11341.29  
 ==================================================
 ```
 
+### Performance Discussion
 
+The H200 uses the same compute architecture (Hopper) and compute core count as the H100. The key upgrade is the HBM3e memory size (141GB vs 80GB) and HBM3e bandwidth (4.8 TB/s vs 3.35 TB/s, a ~1.43x increase). 
 
+1. **Memory Fraction Allocation (Variation 2 & 3)**:
+   By increasing `--mem-fraction-static` from `0.75` to `0.88`, we expand the GKE active radix block cache to **3.94 million tokens** (up from 3.36M in Variation 1, and only 1.1M on H100's A3 Mega). This gives the server a much higher threshold to store active conversational context keys/values.
+   
+2. **PyTorch Workspace Speed Tradeoff**:
+   Restricting the active PyTorch workspace memory to 12% (~17GB) instead of 25% (~35GB) causes a minor throughput regression in dense decoding (from `3,448 tok/s` to `3,302 tok/s` in Variation 2) due to workspace allocation constraints inside PyTorch layers, but allows much larger concurrent batches.
+
+3. **Tuning Chunked Prefill Size (Variation 3)**:
+   By lowering the `--chunked-prefill-size` from `16384` to `8192`, we allow prefill chunks to schedule in smaller execution blocks. This yields:
+   * **TTFT drop from 162.23 s to 144.06 s (an 11.2% improvement)**.
+   * **Overall output token throughput increase to 3,538.81 tok/s (+2.6% over baseline, and +7.1% over Variation 2)**.
+   
+   This configuration offers the optimal balance for H200 deployment: maximum memory cache allocation (88% static fraction) combined with high prefill scheduling throughput.
 
