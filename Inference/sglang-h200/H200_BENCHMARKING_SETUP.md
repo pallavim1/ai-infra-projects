@@ -282,6 +282,47 @@ Max ITL (ms):                            11341.29
 ==================================================
 ```
 
+#### 256 Concurrency Stable Run Raw Metrics (`--mem-fraction-static 0.88`, `--chunked-prefill-size 8192`):
+```text
+============ Serving Benchmark Result ============
+Backend:                                 sglang-oai
+Traffic request rate:                    inf       
+Max request concurrency:                 256       
+Successful requests:                     1536      
+Benchmark duration (s):                  2187.48   
+Total input tokens:                      784969    
+Total input text tokens:                 784969    
+Total generated tokens:                  6434886   
+Total generated tokens (retokenized):    6430603   
+Request throughput (req/s):              0.70      
+Input token throughput (tok/s):          358.85    
+Output token throughput (tok/s):         2941.68   
+Peak output token throughput (tok/s):    3907.00   
+Peak concurrent requests:                263       
+Total token throughput (tok/s):          3300.53   
+Concurrency:                             234.48    
+----------------End-to-End Latency----------------
+Mean E2E Latency (ms):                   333934.25 
+Median E2E Latency (ms):                 336753.00 
+P90 E2E Latency (ms):                    532755.03 
+P99 E2E Latency (ms):                    580525.35 
+---------------Time to First Token----------------
+Mean TTFT (ms):                          69710.23  
+Median TTFT (ms):                        68473.99  
+P99 TTFT (ms):                           174508.57 
+-----Time per Output Token (excl. 1st token)------
+Mean TPOT (ms):                          64.62     
+Median TPOT (ms):                        61.52     
+P99 TPOT (ms):                           120.57    
+---------------Inter-Token Latency----------------
+Mean ITL (ms):                           63.12     
+Median ITL (ms):                         60.43     
+P95 ITL (ms):                            102.09    
+P99 ITL (ms):                            197.96    
+Max ITL (ms):                            7551.35   
+==================================================
+```
+
 ### Performance Discussion
 
 The H200 uses the same compute architecture (Hopper) and compute core count as the H100. The key upgrade is the HBM3e memory size (141GB vs 80GB) and HBM3e bandwidth (4.8 TB/s vs 3.35 TB/s, a ~1.43x increase). 
