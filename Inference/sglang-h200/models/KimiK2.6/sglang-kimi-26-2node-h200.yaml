@@ -38,24 +38,6 @@ spec:
           ]
     spec:
       serviceAccountName: sglang-sa
-      initContainers:
-      - name: check-weights
-        image: busybox:1.36
-        command:
-        - sh
-        - -c
-        - |
-          set -e
-          echo "Listing /models:"
-          ls -la /models/ | head -20
-          test -f /models/config.json || { echo "ERROR: config.json missing"; exit 1; }
-          SHARDS=$(ls /models/*.safetensors 2>/dev/null | wc -l)
-          echo "Found $SHARDS safetensors shards"
-          test "$SHARDS" -gt 0 || { echo "ERROR: no safetensors found"; exit 1; }
-        volumeMounts:
-        - mountPath: /models
-          name: models
-          readOnly: true
       containers:
       - name: sglang-container
         image: docker.io/lmsysorg/sglang:v0.5.10.post1
@@ -98,7 +80,7 @@ spec:
               apiVersion: v1
               fieldPath: metadata.labels['apps.kubernetes.io/pod-index']
         - name: NCCL_DEBUG
-          value: INFO
+          value: WARN
         - name: NCCL_IB_DISABLE
           value: "0"
         - name: LD_LIBRARY_PATH
