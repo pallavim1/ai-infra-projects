@@ -1,0 +1,170 @@
+apiVersion: networking.gke.io/v1
+kind: GKENetworkParamSet
+metadata:
+  name: h200-network-gvnic
+spec:
+  vpc: nemo-gvnic-net
+  vpcSubnet: nemo-gvnic-sub
+---
+apiVersion: networking.gke.io/v1
+kind: Network
+metadata:
+  name: h200-network-gvnic
+spec:
+  type: Layer3
+  parametersRef:
+    group: networking.gke.io
+    kind: GKENetworkParamSet
+    name: h200-network-gvnic
+---
+apiVersion: networking.gke.io/v1
+kind: GKENetworkParamSet
+metadata:
+  name: h200-network-rdma-1
+spec:
+  vpc: nemo-rdma-net
+  vpcSubnet: nemo-rdma-sub-0
+---
+apiVersion: networking.gke.io/v1
+kind: Network
+metadata:
+  name: h200-network-rdma-1
+spec:
+  type: Device
+  parametersRef:
+    group: networking.gke.io
+    kind: GKENetworkParamSet
+    name: h200-network-rdma-1
+---
+apiVersion: networking.gke.io/v1
+kind: GKENetworkParamSet
+metadata:
+  name: h200-network-rdma-2
+spec:
+  vpc: nemo-rdma-net
+  vpcSubnet: nemo-rdma-sub-1
+---
+apiVersion: networking.gke.io/v1
+kind: Network
+metadata:
+  name: h200-network-rdma-2
+spec:
+  type: Device
+  parametersRef:
+    group: networking.gke.io
+    kind: GKENetworkParamSet
+    name: h200-network-rdma-2
+---
+apiVersion: networking.gke.io/v1
+kind: GKENetworkParamSet
+metadata:
+  name: h200-network-rdma-3
+spec:
+  vpc: nemo-rdma-net
+  vpcSubnet: nemo-rdma-sub-2
+---
+apiVersion: networking.gke.io/v1
+kind: Network
+metadata:
+  name: h200-network-rdma-3
+spec:
+  type: Device
+  parametersRef:
+    group: networking.gke.io
+    kind: GKENetworkParamSet
+    name: h200-network-rdma-3
+---
+apiVersion: networking.gke.io/v1
+kind: GKENetworkParamSet
+metadata:
+  name: h200-network-rdma-4
+spec:
+  vpc: nemo-rdma-net
+  vpcSubnet: nemo-rdma-sub-3
+---
+apiVersion: networking.gke.io/v1
+kind: Network
+metadata:
+  name: h200-network-rdma-4
+spec:
+  type: Device
+  parametersRef:
+    group: networking.gke.io
+    kind: GKENetworkParamSet
+    name: h200-network-rdma-4
+---
+apiVersion: networking.gke.io/v1
+kind: GKENetworkParamSet
+metadata:
+  name: h200-network-rdma-5
+spec:
+  vpc: nemo-rdma-net
+  vpcSubnet: nemo-rdma-sub-4
+---
+apiVersion: networking.gke.io/v1
+kind: Network
+metadata:
+  name: h200-network-rdma-5
+spec:
+  type: Device
+  parametersRef:
+    group: networking.gke.io
+    kind: GKENetworkParamSet
+    name: h200-network-rdma-5
+---
+apiVersion: networking.gke.io/v1
+kind: GKENetworkParamSet
+metadata:
+  name: h200-network-rdma-6
+spec:
+  vpc: nemo-rdma-net
+  vpcSubnet: nemo-rdma-sub-5
+---
+apiVersion: networking.gke.io/v1
+kind: Network
+metadata:
+  name: h200-network-rdma-6
+spec:
+  type: Device
+  parametersRef:
+    group: networking.gke.io
+    kind: GKENetworkParamSet
+    name: h200-network-rdma-6
+---
+apiVersion: networking.gke.io/v1
+kind: GKENetworkParamSet
+metadata:
+  name: h200-network-rdma-7
+spec:
+  vpc: nemo-rdma-net
+  vpcSubnet: nemo-rdma-sub-6
+---
+apiVersion: networking.gke.io/v1
+kind: Network
+metadata:
+  name: h200-network-rdma-7
+spec:
+  type: Device
+  parametersRef:
+    group: networking.gke.io
+    kind: GKENetworkParamSet
+    name: h200-network-rdma-7
+---
+apiVersion: networking.gke.io/v1
+kind: GKENetworkParamSet
+metadata:
+  name: h200-network-rdma-8
+spec:
+  vpc: nemo-rdma-net
+  vpcSubnet: nemo-rdma-sub-7
+---
+apiVersion: networking.gke.io/v1
+kind: Network
+metadata:
+  name: h200-network-rdma-8
+spec:
+  type: Device
+  parametersRef:
+    group: networking.gke.io
+    kind: GKENetworkParamSet
+    name: h200-network-rdma-8

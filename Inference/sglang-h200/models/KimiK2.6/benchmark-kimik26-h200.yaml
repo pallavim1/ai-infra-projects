@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sglang-kimik26-benchmark
+  namespace: default
+  annotations:
+    gke-gcsfuse/volumes: "true"
+spec:
+  nodeSelector:
+    workload: benchmark-client
+  serviceAccountName: sglang-sa
+  restartPolicy: Never
+  volumes:
+  - name: workspace-volume
+    emptyDir: {}
+  - name: models
+    csi:
+      driver: gcsfuse.csi.storage.gke.io
+      readOnly: true
+      volumeAttributes:
+        bucketName: pallaviam-sglang-kimi-us-east5
+        mountOptions: "implicit-dirs,only-dir=kimi-k2.6"
+  containers:
+  - name: benchmark
+    image: docker.io/lmsysorg/sglang:v0.5.10.post1
+    volumeMounts:
+    - name: workspace-volume
+      mountPath: /workspace
+    - name: models
+      mountPath: /models
+    env:
+    - name: HF_TOKEN
+      valueFrom:
+          secretKeyRef:
+            name: hf-secret
+            key: HF_TOKEN
+    command:
+    - /bin/bash
+    - -c
+    args:
+    - |
+      echo "Starting SGLang 512-Concurrency Benchmark for Kimi-K2.6..."
+      
+      API_URL="http://sglang-serving-on-master:8000"
+      MODEL_NAME="/models"
+      TOKENIZER_NAME="/models"
+      CONCURRENCY=512
+      INPUT_LEN=1024
+      OUTPUT_LEN=8192
+      NUM_PROMPTS=1536
+ 
+      python3 -m sglang.bench_serving \
+          --backend sglang-oai \
+          --base-url $API_URL \
+          --model $MODEL_NAME \
+          --tokenizer $TOKENIZER_NAME \
+          --dataset-name random \
+          --random-input-len $INPUT_LEN \
+          --random-output-len $OUTPUT_LEN \
+          --num-prompts $NUM_PROMPTS \
+          --max-concurrency $CONCURRENCY \
+          --output-file /workspace/results_kimik26.json \
+          --apply-chat-template
+ 
+      echo "Sleeping so you can extract the results manually if needed..."
+      sleep infinity
