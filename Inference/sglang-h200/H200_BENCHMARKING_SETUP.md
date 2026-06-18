@@ -215,35 +215,78 @@ To evaluate the H200's capacity and throughput potential, we ran three distinct 
 
 #### H200 Test Variations Configuration
 
-| Test Run | static_fraction | chunked_prefill_size | KV Cache Capacity (Tokens) | Status | Output Throughput |
+| Test Run | static_fraction | chunked_prefill_size | Parallelism Configuration | Status | Output Throughput |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Variation 1** (H100 Baseline Port) | `0.75` | `16384` | 3.36 Million | Completed | 3,448.71 tok/s |
-| **Variation 2** (H200 Optimized Capacity) | `0.88` | `16384` | **3.94 Million** | Completed | 3,302.12 tok/s |
-| **Variation 3** (Tuned Chunked Prefill) | `0.88` | **`8192`** | **3.94 Million** | Completed | **3,538.81 tok/s** |
+| **Variation 1** (H100 Baseline Port) | `0.75` | `16384` | TP=8, PP=2 (Hybrid) | Completed | 3,448.71 tok/s |
+| **Variation 2** (H200 Optimized Capacity) | `0.88` | `16384` | TP=8, PP=2 (Hybrid) | Completed | 3,302.12 tok/s |
+| **Variation 3** (Tuned Chunked Prefill) | `0.88` | `8192` | TP=8, PP=2 (Hybrid) | Completed | **3,538.81 tok/s** |
+| **Variation 4** (Pure Tensor Parallel) | `0.88` | `8192` | **TP=16 (Pure)** | Completed | 3,337.03 tok/s |
 
 ---
 
 ### Step-by-Step Metrics Comparison
 
-Comparing the H100 cluster run (A3 Mega, 16x H100 GPUs) against the three H200 variations:
+Comparing the H100 cluster run (A3 Mega, 16x H100 GPUs) against the H200 variations:
 
-| Metric | H100 Cluster | H200 Var 1 (Baseline) | H200 Var 2 (Capacity) | H200 Var 3 (Prefill Tuned) | Improvement (Var 3 vs H100) |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **Output Token Throughput** | 3,216.78 tok/s | 3,448.71 tok/s | 3,302.12 tok/s | **3,538.81 tok/s** | **+10.0%** |
-| **Total Token Throughput** | 3,609.18 tok/s | 3,869.40 tok/s | 3,705.10 tok/s | **3,970.50 tok/s** | **+10.0%** |
-| **Request Throughput** | 0.77 req/s | 0.82 req/s | 0.79 req/s | **0.84 req/s** | **+9.1%** |
-| **Mean End-to-End Latency** | 587.19 s | 549.21 s | 572.84 s | **539.18 s** | **-8.2% (Lower is better)** |
-| **Mean Time to First Token (TTFT)** | 177.36 s | 162.23 s | 184.21 s | **144.06 s** | **-18.8% (Lower is better)** |
-| **Mean Time per Output Token (TPOT)** | 105.86 ms | 98.91 ms | 100.82 ms | **101.60 ms** | **-4.0% (Lower is better)** |
-| **Mean Inter-Token Latency (ITL)** | 97.95 ms | 92.49 ms | 93.18 ms | **94.46 ms** | **-3.6% (Lower is better)** |
+| Metric | H100 Cluster | H200 Var 3 (TP=8 PP=2) | H200 Var 4 (TP=16 Pure) | Improvement (Var 4 vs Var 3) |
+| :--- | :---: | :---: | :---: | :---: |
+| **Output Token Throughput** | 3,216.78 tok/s | **3,538.81 tok/s** | 3,337.03 tok/s | -5.7% (Network overhead) |
+| **Total Token Throughput** | 3,609.18 tok/s | **3,970.50 tok/s** | 3,744.10 tok/s | -5.7% |
+| **Request Throughput** | 0.77 req/s | **0.84 req/s** | 0.80 req/s | -4.8% |
+| **Mean End-to-End Latency** | 587.19 s | **539.18 s** | 567.01 s | +5.1% |
+| **Mean Time to First Token (TTFT)** | 177.36 s | 144.06 s | **93.49 s** | **-35.1% (35.1% lower latency!)** |
+| **Median Time to First Token (TTFT)**| - | 202.19 s | **131.94 s** | **-34.7% (34.7% lower latency!)** |
+| **Mean Time per Output Token (TPOT)**| 105.86 ms | 101.60 ms | **121.07 ms** | +19.1% |
+| **Mean Inter-Token Latency (ITL)** | 97.95 ms | **94.46 ms** | 113.16 ms | +19.8% |
 
 ---
 
 ### Detailed Raw Logs
 
-#### Variation 3 Raw Metrics (`--mem-fraction-static 0.88`, `--chunked-prefill-size 8192`):
+#### Variation 4 Raw Metrics (TP=16, `--mem-fraction-static 0.88`, `--chunked-prefill-size 8192`):
 ```text
-============ Serving Benchmark Result ============
+============ Serving Serving Benchmark Result ============
+Backend:                                 sglang-oai
+Traffic request rate:                    inf       
+Max request concurrency:                 512       
+Successful requests:                     1536      
+Benchmark duration (s):                  1928.33   
+Total input tokens:                      784969    
+Total input text tokens:                 784969    
+Total generated tokens:                  6434886   
+Total generated tokens (retokenized):    6432513   
+Request throughput (req/s):              0.80      
+Input token throughput (tok/s):          407.07    
+Output token throughput (tok/s):         3337.03   
+Peak output token throughput (tok/s):    5178.00   
+Peak concurrent requests:                517       
+Total token throughput (tok/s):          3744.10   
+Concurrency:                             451.64    
+----------------End-to-End Latency----------------
+Mean E2E Latency (ms):                   567005.24 
+Median E2E Latency (ms):                 559109.23 
+P90 E2E Latency (ms):                    923991.16 
+P99 E2E Latency (ms):                    1035074.71
+---------------Time to First Token----------------
+Mean TTFT (ms):                          93489.90  
+Median TTFT (ms):                        131943.32 
+P99 TTFT (ms):                           148194.60 
+-----Time per Output Token (excl. 1st token)------
+Mean TPOT (ms):                          121.07    
+Median TPOT (ms):                        116.00    
+P99 TPOT (ms):                           159.80    
+---------------Inter-Token Latency----------------
+Mean ITL (ms):                           113.16    
+Median ITL (ms):                         114.39    
+P95 ITL (ms):                            145.17    
+P99 ITL (ms):                            497.58    
+Max ITL (ms):                            5178.00   
+==================================================
+```
+
+#### Variation 3 Raw Metrics (TP=8 PP=2, `--mem-fraction-static 0.88`, `--chunked-prefill-size 8192`):
+```text
+============ Serving Serving Benchmark Result ============
 Backend:                                 sglang-oai
 Traffic request rate:                    inf       
 Max request concurrency:                 512       
@@ -281,6 +324,7 @@ P99 ITL (ms):                            161.03
 Max ITL (ms):                            11341.29  
 ==================================================
 ```
+
 
 #### 256 Concurrency Stable Run Raw Metrics (`--mem-fraction-static 0.88`, `--chunked-prefill-size 8192`):
 ```text
