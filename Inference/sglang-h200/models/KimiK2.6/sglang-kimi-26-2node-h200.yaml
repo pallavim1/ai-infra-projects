@@ -47,7 +47,26 @@ spec:
         - -c
         args:
         - |
-          sleep 86400
+          # Source GKE's official RDMA environment profile
+          if [ -f /usr/local/gib/scripts/set_nccl_env.sh ]; then
+            source /usr/local/gib/scripts/set_nccl_env.sh
+          fi
+
+          python3 -m sglang.launch_server \
+              --model-path /models \
+              --tensor-parallel-size 8 \
+              --pipeline-parallel-size 2 \
+              --nnodes 2 \
+              --node-rank $POD_INDEX \
+              --port 8000 \
+              --dist-init-addr distributed-sglang-0.sglang-master-pod:5000 \
+              --trust-remote-code \
+              --kv-cache-dtype fp8_e5m2 \
+               --reasoning-parser kimi_k2 \
+              --tool-call-parser kimi_k2 \
+              --mem-fraction-static 0.88 \
+              --chunked-prefill-size 8192 \
+              --host 0.0.0.0 
 
         env:
         - name: HF_TOKEN
