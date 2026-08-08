@@ -1,7 +1,7 @@
-# Full-Matrix Benchmark Report: Gemma 4 26B on G4 (NVIDIA RTX PRO 6000 Blackwell)
+# Full-Matrix Benchmark Report: Gemma 4 26B (Input Sequence Length & Output Sequence Length Matrix)
 
 ## Executive Summary
-This report presents final benchmark results for **Gemma 4 26B** (`google/gemma-4-26B-A4B-it`) served via **vLLM v0.26.0** on a Google Cloud GCE **G4 instance** (`g4-standard-48` equipped with **1x NVIDIA RTX PRO 6000 Blackwell Edition GPU**, 96 GB VRAM).
+This report presents final benchmark results for **Gemma 4 26B** (`google/gemma-4-26B-A4B-it`) served via **vLLM v0.26.0** on a Google Cloud GCE **G4 instance** (`g4-standard-48` equipped with **1x NVIDIA RTX PRO 6000 Blackwell Edition GPU**, 96 GB VRAM). Performance is evaluated across 4 variations of **Input Sequence Length (ISL)** and **Output Sequence Length (OSL)** across 5 concurrency levels (64, 128, 256, 512, 1024).
 
 ### Optimized Serving Configuration
 * **Model**: `google/gemma-4-26B-A4B-it`
@@ -16,11 +16,12 @@ This report presents final benchmark results for **Gemma 4 26B** (`google/gemma-
 
 ---
 
-## Full-Matrix Performance Data Tables (All 20 Benchmark Runs)
+## Full-Matrix Performance Data Tables (20 Benchmark Runs across ISL / OSL Variations)
 
-### 1. Workload: ISL 1k / OSL 512 (Input Sequence Length = 1000 tokens, Output Sequence Length = 512 tokens)
+### 1. Workload: Input Sequence Length (ISL) 1k / Output Sequence Length (OSL) 512
+*(Input Sequence Length: 1,000 tokens | Output Sequence Length: 512 tokens)*
 
-| Concurrency Level | Request Rate (RPS) | Total Throughput (tok/s) | Output Throughput (tok/s) | Median TTFT (ms) | Median ITL (ms) |
+| Concurrency Level | Request Rate (RPS) | Total Throughput (tok/s) | Output Token Throughput (tok/s) | Median Time-to-First-Token TTFT (ms) | Median Inter-Token Latency ITL (ms) |
 |:---:|:---:|:---:|:---:|:---:|:---:|
 | **64** | 64 | **5,489.12** | 1,829.83 | **746.10** | **13.20** |
 | **128** | 128 | **8,980.15** | 2,993.42 | **1,697.50** | **13.41** |
@@ -30,9 +31,10 @@ This report presents final benchmark results for **Gemma 4 26B** (`google/gemma-
 
 ---
 
-### 2. Workload: ISL 1k / OSL 1k (Input Sequence Length = 1000 tokens, Output Sequence Length = 1000 tokens)
+### 2. Workload: Input Sequence Length (ISL) 1k / Output Sequence Length (OSL) 1k
+*(Input Sequence Length: 1,000 tokens | Output Sequence Length: 1,000 tokens)*
 
-| Concurrency Level | Request Rate (RPS) | Total Throughput (tok/s) | Output Throughput (tok/s) | Median TTFT (ms) | Median ITL (ms) |
+| Concurrency Level | Request Rate (RPS) | Total Throughput (tok/s) | Output Token Throughput (tok/s) | Median Time-to-First-Token TTFT (ms) | Median Inter-Token Latency ITL (ms) |
 |:---:|:---:|:---:|:---:|:---:|:---:|
 | **64** | 64 | **6,037.83** | 3,018.92 | **520.10** | **38.71** |
 | **128** | 128 | **7,764.52** | 3,882.26 | **3,092.40** | **54.20** |
@@ -42,9 +44,10 @@ This report presents final benchmark results for **Gemma 4 26B** (`google/gemma-
 
 ---
 
-### 3. Workload: ISL 8k / OSL 1k (Input Sequence Length = 8000 tokens, Output Sequence Length = 1000 tokens)
+### 3. Workload: Input Sequence Length (ISL) 8k / Output Sequence Length (OSL) 1k
+*(Input Sequence Length: 8,000 tokens | Output Sequence Length: 1,000 tokens)*
 
-| Concurrency Level | Request Rate (RPS) | Total Throughput (tok/s) | Output Throughput (tok/s) | Median TTFT (ms) | Median ITL (ms) |
+| Concurrency Level | Request Rate (RPS) | Total Throughput (tok/s) | Output Token Throughput (tok/s) | Median Time-to-First-Token TTFT (ms) | Median Inter-Token Latency ITL (ms) |
 |:---:|:---:|:---:|:---:|:---:|:---:|
 | **64** | 64 | **14,899.35** | 1,665.48 | **1,850.40** | **42.24** |
 | **128** | 128 | **14,858.99** | 1,651.00 | **4,520.10** | **50.96** |
@@ -54,9 +57,10 @@ This report presents final benchmark results for **Gemma 4 26B** (`google/gemma-
 
 ---
 
-### 4. Workload: ISL 1k / OSL 8k (Input Sequence Length = 1000 tokens, Output Sequence Length = 8000 tokens)
+### 4. Workload: Input Sequence Length (ISL) 1k / Output Sequence Length (OSL) 8k
+*(Input Sequence Length: 1,000 tokens | Output Sequence Length: 8,000 tokens)*
 
-| Concurrency Level | Request Rate (RPS) | Total Throughput (tok/s) | Output Throughput (tok/s) | Median TTFT (ms) | Median ITL (ms) |
+| Concurrency Level | Request Rate (RPS) | Total Throughput (tok/s) | Output Token Throughput (tok/s) | Median Time-to-First-Token TTFT (ms) | Median Inter-Token Latency ITL (ms) |
 |:---:|:---:|:---:|:---:|:---:|:---:|
 | **64** | 64 | **3,423.28** | 3,042.92 | **1,907.15** | **41.30** |
 | **128** | 128 | **3,479.58** | 3,092.96 | **4,520.10** | **54.07** |
@@ -68,10 +72,10 @@ This report presents final benchmark results for **Gemma 4 26B** (`google/gemma-
 
 ## Visual Performance Charts
 
-### 1. Total Token Throughput vs. Concurrency Level Across ISL/OSL Workloads
+### 1. Total Token Throughput vs. Concurrency Level Across Input Sequence Length (ISL) & Output Sequence Length (OSL) Workloads
 ```mermaid
 gantt
-    title Total Token Throughput (tok/s) Scaling by ISL / OSL Workload
+    title Total Token Throughput (tok/s) Scaling by Input Sequence Length (ISL) / Output Sequence Length (OSL)
     dateFormat  X
     axisFormat %s
 
@@ -96,10 +100,10 @@ gantt
 
 ### **1. Has Performance Saturation Been Reached?**
 
-**YES — Performance saturates beyond Concurrency 256 across all ISL/OSL variations.**
+**YES — Performance saturates beyond Concurrency 256 across all Input Sequence Length (ISL) & Output Sequence Length (OSL) variations.**
 
 * **Compute & Memory Bandwidth Saturation**:
-  * Output throughput saturates at **~4,000–4,100 tok/s** for generation workloads (`ISL 1k / OSL 1k` & `ISL 1k / OSL 8k`).
+  * Output token throughput saturates at **~4,000–4,100 tok/s** for generation-heavy workloads (`ISL 1k / OSL 1k` & `ISL 1k / OSL 8k`).
   * Total token throughput saturates at **~15,700 tok/s** for prefill-heavy workloads (`ISL 8k / OSL 1k`) due to GPU memory bandwidth limits on a single Blackwell RTX PRO 6000 GPU.
 
 * **Latency Queueing Growth**:
