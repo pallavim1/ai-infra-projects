@@ -1,9 +1,12 @@
 #!/bin/bash
 
 CONTAINER_NAME="vllm-gemma4-opt26b"
-MODEL_NAME="google/gemma-4-26B-A4B-it"
-RESULTS_FILE="$HOME/gemma4_26b_manual_results.txt"
+MODEL_NAME="google/gemma-4-26B-A4B"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+RESULTS_FILE="$HOME/gemma4_26b_manual_results_${TIMESTAMP}.txt"
 PORT=8000
+
+HF_TOKEN="${HF_TOKEN:-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}"
 
 if [ -z "$HF_TOKEN" ]; then
   echo "[ERROR] HF_TOKEN is not set. Please export your HuggingFace token:"
@@ -65,7 +68,7 @@ done
 
 echo "==> vLLM Server is LIVE and READY!"
 
-echo "=== Gemma 4 26B ($MODEL_NAME) Full Matrix Benchmark Suite ===" | tee "$RESULTS_FILE"
+echo "=== Gemma 4 26B ($MODEL_NAME) Full Matrix Benchmark Suite ===" | tee -a "$RESULTS_FILE"
 echo "Run Date: $(date)" | tee -a "$RESULTS_FILE"
 echo "Model: $MODEL_NAME" | tee -a "$RESULTS_FILE"
 echo "----------------------------------------------------------------------------------" | tee -a "$RESULTS_FILE"
@@ -100,7 +103,8 @@ for workload in "${WORKLOADS[@]}"; do
       --random-input-len "$ISL" \
       --random-output-len "$OSL" \
       --num-prompts "$PROMPTS" \
-      --request-rate "$C" \
+      --request-rate inf \
+      --max-concurrency "$C" \
       --ready-check-timeout-sec 300 \
       --port "$PORT" 2>&1 | tee -a "$RESULTS_FILE" || true
   done
