@@ -4,6 +4,7 @@ This directory contains deployment manifests, benchmark execution scripts, and c
 
 ## Files Included
 
+- [`results/gemma4_26b_g4_benchmark_sweep_report.md`](./results/gemma4_26b_g4_benchmark_sweep_report.md): **New Structured Extended Benchmark Report** (Peak throughput summary, sweet-spot SLA analysis, and full concurrency sweep breakdown).
 - [`vllm-gemma4-26b.yaml`](./vllm-gemma4-26b.yaml): Kubernetes Deployment spec with full optimization parameters (FP8 KV Cache, QWIX FP8 Quantization, async scheduling).
 - [`run_benchmarks.sh`](./run_benchmarks.sh): Standalone automation script to execute the 20-run benchmark matrix (4 ISL/OSL workloads × 5 concurrency levels).
 - [`benchmark_report_concurrency_matrix.md`](./benchmark_report_concurrency_matrix.md): Max-concurrency benchmark report (`--request-rate inf --max-concurrency $C`, Aug 8, 2026).
