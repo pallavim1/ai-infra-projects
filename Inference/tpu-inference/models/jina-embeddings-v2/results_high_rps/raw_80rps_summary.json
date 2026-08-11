@@ -1,0 +1,74 @@
+{
+  "prompt_c2_1024b": {
+    "scenario": "prompt_c2_1024b",
+    "metrics": {
+      "prompt_c2_latency_ms": {
+        "count": 1601,
+        "achieved_rps": 80.08,
+        "min": 10.5,
+        "p50": 11.4,
+        "avg": 11.6,
+        "p90": 12.3,
+        "p95": 12.8,
+        "p99": 15.7,
+        "max": 19.1
+      }
+    },
+    "resources": {},
+    "errors": 0
+  },
+  "prompt_c2_2048b": {
+    "scenario": "prompt_c2_2048b",
+    "metrics": {
+      "prompt_c2_latency_ms": {
+        "count": 1601,
+        "achieved_rps": 80.06,
+        "min": 16.2,
+        "p50": 18.2,
+        "avg": 18.9,
+        "p90": 21.9,
+        "p95": 23.7,
+        "p99": 26.3,
+        "max": 32.8
+      }
+    },
+    "resources": {},
+    "errors": 0
+  },
+  "prompt_c2_5120b": {
+    "scenario": "prompt_c2_5120b",
+    "metrics": {
+      "prompt_c2_latency_ms": {
+        "count": 1601,
+        "achieved_rps": 79.93,
+        "min": 0.8,
+        "p50": 29.5,
+        "avg": 30.5,
+        "p90": 38.8,
+        "p95": 41.1,
+        "p99": 49.5,
+        "max": 58.8
+      }
+    },
+    "resources": {},
+    "errors": 1
+  },
+  "prompt_c2_7168b": {
+    "scenario": "prompt_c2_7168b",
+    "metrics": {
+      "prompt_c2_latency_ms": {
+        "count": 1601,
+        "achieved_rps": 75.09,
+        "min": 0.9,
+        "p50": 820.2,
+        "avg": 818.7,
+        "p90": 1420.5,
+        "p95": 1474.2,
+        "p99": 1523.2,
+        "max": 1540.9
+      }
+    },
+    "resources": {},
+    "errors": 2
+  }
+}
