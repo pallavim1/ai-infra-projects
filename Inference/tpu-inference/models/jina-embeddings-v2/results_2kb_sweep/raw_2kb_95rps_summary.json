@@ -1,0 +1,20 @@
+{
+  "prompt_c2_2048b": {
+    "scenario": "prompt_c2_2048b",
+    "metrics": {
+      "prompt_c2_latency_ms": {
+        "count": 1900,
+        "achieved_rps": 93.47,
+        "min": 20.6,
+        "p50": 275.4,
+        "avg": 246.0,
+        "p90": 356.6,
+        "p95": 359.0,
+        "p99": 363.8,
+        "max": 365.1
+      }
+    },
+    "resources": {},
+    "errors": 0
+  }
+}
