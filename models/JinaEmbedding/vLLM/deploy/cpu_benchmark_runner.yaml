@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cpu-benchmark-runner
+  namespace: default
+  labels:
+    app: cpu-benchmark-runner
+spec:
+  nodeSelector:
+    cloud.google.com/gke-nodepool: cpu-benchmark-pool
+  containers:
+  - name: runner
+    image: python:3.12-slim
+    command: ["/bin/bash", "-c", "sleep infinity"]
+    resources:
+      requests:
+        cpu: "4"
+        memory: 8Gi
+      limits:
+        cpu: "7"
+        memory: 24Gi
