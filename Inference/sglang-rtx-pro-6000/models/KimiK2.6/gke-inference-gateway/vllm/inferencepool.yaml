@@ -1,0 +1,15 @@
+apiVersion: inference.networking.k8s.io/v1
+kind: InferencePool
+metadata:
+  name: precise-prefix-cache-routing
+  namespace: default
+spec:
+  endpointPickerRef:
+    name: vllm-kimi-service
+    port:
+      number: 30000
+  selector:
+    matchLabels:
+      app: vllm-kimi
+  targetPorts:
+  - number: 30000

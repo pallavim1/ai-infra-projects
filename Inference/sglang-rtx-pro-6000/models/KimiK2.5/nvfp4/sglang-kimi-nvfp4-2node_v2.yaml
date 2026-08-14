@@ -91,7 +91,7 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
-        cloud.google.com/gke-nodepool: pm-8x-rtx6000-2nic-pool
+        cloud.google.com/gke-nodepool: g4-384-np-0
       tolerations:
       - effect: NoSchedule
         key: nvidia.com/gpu

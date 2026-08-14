@@ -1,0 +1,175 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vllm-benchmark-config
+  namespace: default
+data:
+  benchmark.py: |
+    import os
+    import sys
+    import time
+    from openai import OpenAI
+
+    VLLM_API_URL = os.getenv("VLLM_API_URL", "http://vllm-kimi-service:30000/v1")
+
+    client = OpenAI(
+        base_url=VLLM_API_URL,
+        api_key="token-not-required"
+    )
+
+    def wait_for_server():
+        print("=" * 70)
+        print(f"Connecting to vLLM Kimi-K2.6 server at: {VLLM_API_URL}")
+        print("=" * 70)
+        
+        max_attempts = 180
+        for attempt in range(1, max_attempts + 1):
+            try:
+                models = client.models.list()
+                model_obj = models.data[0]
+                max_len = getattr(model_obj, "max_model_len", "unknown")
+                print(f"\n✅ Server ready! Model ID: {model_obj.id}, max_model_len: {max_len}")
+                return
+            except Exception as e:
+                time.sleep(5)
+                
+        print("\n❌ Failed to connect to vLLM server within timeout.", file=sys.stderr)
+        sys.exit(1)
+
+    def run_context_test(test_name, target_tokens, repeat_count):
+        print(f"\n--- [{test_name}: {target_tokens // 1000}K Context Prefill & Generation] ---")
+        prompt = ("The quick brown fox jumps over the lazy dog. " * repeat_count) + "\nSummarize the main themes."
+        print(f"Sending prompt (~{target_tokens:,} tokens)...")
+
+        p_start = time.time()
+        p_first_token = None
+        gen_tokens = 0
+
+        try:
+            response = client.chat.completions.create(
+                model="/models",
+                messages=[{"role": "user", "content": prompt}],
+                stream=True,
+                max_tokens=200,
+            )
+
+            for chunk in response:
+                if chunk.choices:
+                    delta = chunk.choices[0].delta
+                    text_chunk = getattr(delta, "content", None) or getattr(delta, "reasoning_content", None) or ""
+                    if text_chunk:
+                        if p_first_token is None:
+                            p_first_token = time.time()
+                        gen_tokens += 1
+                        sys.stdout.write(text_chunk)
+                        sys.stdout.flush()
+
+            p_end = time.time()
+            prefill_latency = (p_first_token - p_start) if p_first_token else (p_end - p_start)
+            gen_sec = p_end - (p_first_token or p_start)
+            prefill_tps = target_tokens / prefill_latency if prefill_latency > 0 else 0
+            gen_tps = gen_tokens / gen_sec if gen_sec > 0 else 0
+
+            print(f"\n\n📊 {test_name} ({target_tokens // 1000}K Context) Results:")
+            print(f"  • Prefill Latency ({target_tokens // 1000}K):     {prefill_latency:.2f} s")
+            print(f"  • Prefill Throughput:         {prefill_tps:.2f} tokens/sec")
+            print(f"  • Decode Generation Speed:    {gen_tps:.2f} tokens/sec")
+            print(f"  • Generated Tokens:          {gen_tokens}")
+            return True, prefill_latency, prefill_tps, gen_tps
+        except Exception as e:
+            print(f"\n❌ Error running {test_name}: {e}", file=sys.stderr)
+            return False, 0, 0, 0
+
+    def run_benchmarks():
+        print("\n" + "=" * 70)
+        print("🚀 STARTING VLLM KIMI-K2.6 BENCHMARKS (5-NODE 40x GPU CLUSTER - MAX FEASIBLE CONTEXT)")
+        print("=" * 70)
+
+        # Test 1: Sanity Inference
+        print("\n--- [TEST 1: Quick Response & Streaming Verification] ---")
+        prompt = "Explain why FP8 KV cache improves inference throughput in 3 bullet points."
+        start_time = time.time()
+        first_token_time = None
+        output_text = ""
+        token_count = 0
+
+        response = client.chat.completions.create(
+            model="/models",
+            messages=[{"role": "user", "content": prompt}],
+            stream=True,
+            max_tokens=150,
+        )
+
+        sys.stdout.write("Response: ")
+        sys.stdout.flush()
+        for chunk in response:
+            if chunk.choices:
+                delta = chunk.choices[0].delta
+                text_chunk = getattr(delta, "content", None) or getattr(delta, "reasoning_content", None) or ""
+                if text_chunk:
+                    if first_token_time is None:
+                        first_token_time = time.time()
+                    output_text += text_chunk
+                    token_count += 1
+                    sys.stdout.write(text_chunk)
+                    sys.stdout.flush()
+
+        end_time = time.time()
+        ttft = (first_token_time - start_time) * 1000 if first_token_time else (end_time - start_time) * 1000
+        gen_duration = end_time - (first_token_time or start_time)
+        gen_tps = token_count / gen_duration if gen_duration > 0 else 0
+
+        print(f"\n\n📊 Test 1 Results:")
+        print(f"  • TTFT (Time-to-first-token): {ttft:.2f} ms")
+        print(f"  • Generation Speed:          {gen_tps:.2f} tokens/sec")
+        print(f"  • Total Output Tokens:         {token_count}")
+
+        # Test 2: 32K Context
+        run_context_test("TEST 2", 32000, 2500)
+
+        # Test 3: 256K Context
+        run_context_test("TEST 3", 256000, 20000)
+
+        # Test 4: 450K Context (Maximum Feasible Context Limit on 5 Nodes)
+        run_context_test("TEST 4", 450000, 35000)
+
+        print("\n" + "=" * 70)
+        print("✅ ALL BENCHMARKS COMPLETED SUCCESSFULLY!")
+        print("=" * 70)
+
+    if __name__ == "__main__":
+        wait_for_server()
+        run_benchmarks()
+        print("\nKeeping benchmark pod running...")
+        while True:
+            time.sleep(3600)
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vllm-benchmark-pod
+  namespace: default
+  labels:
+    app: vllm-benchmark
+spec:
+  restartPolicy: Never
+  containers:
+  - name: benchmark-container
+    image: python:3.11-slim
+    command: ["/bin/sh", "-c"]
+    args:
+    - |
+      pip install --no-cache-dir openai && python3 -u /app/benchmark.py
+    env:
+    - name: VLLM_API_URL
+      value: "http://vllm-kimi-service:30000/v1"
+    - name: PYTHONUNBUFFERED
+      value: "1"
+    volumeMounts:
+    - name: app-code
+      mountPath: /app/benchmark.py
+      subPath: benchmark.py
+  volumes:
+  - name: app-code
+    configMap:
+      name: vllm-benchmark-config

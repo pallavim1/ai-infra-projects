@@ -1,0 +1,9 @@
+No existing reservation creating...
+Attempting to create reservation...
+ERROR: (gcloud.compute.reservations.create) Could not fetch resource:
+---
+code: ZONE_RESOURCE_POOL_EXHAUSTED_WITH_DETAILS
+message: The zone 'projects/northam-ce-mlai-tpu/zones/asia-east1-b' does not have
+  enough resources available to fulfill the request.  '(resource type:compute)'.
+
+Failed to create reservation retrying... attempt: 1

@@ -1,0 +1,121 @@
+No existing reservation creating...
+Attempting to create reservation...
+ERROR: (gcloud.compute.reservations.create) Could not fetch resource:
+---
+code: ZONE_RESOURCE_POOL_EXHAUSTED
+errorDetails:
+- help:
+    links:
+    - description: Troubleshooting documentation
+      url: https://cloud.google.com/compute/docs/resource-error
+- localizedMessage:
+    locale: en-US
+    message: A g2-standard-4 VM instance with 1 nvidia-l4 accelerator(s) is currently
+      unavailable in the us-west1-c zone, because of gpu_availability root cause(s).
+      Consider trying your request in the us-west1-a zone(s), which currently has
+      capacity to accommodate your request. Alternatively, you can try your request
+      again with a different VM hardware configuration or at a later time. For more
+      information, see the troubleshooting documentation.
+- errorInfo:
+    domain: compute.googleapis.com
+    metadatas:
+      attachment: nvidia-l4:1
+      vmType: g2-standard-4
+      zone: us-west1-c
+      zonesAvailable: us-west1-a
+    reason: gpu_availability
+message: The zone 'projects/northam-ce-mlai-tpu/zones/us-west1-c' does not have enough
+  resources available to fulfill the request.  Try a different zone, or try again
+  later.
+
+Failed to create reservation retrying... attempt: 1
+ERROR: (gcloud.compute.reservations.create) Could not fetch resource:
+---
+code: ZONE_RESOURCE_POOL_EXHAUSTED
+errorDetails:
+- help:
+    links:
+    - description: Troubleshooting documentation
+      url: https://cloud.google.com/compute/docs/resource-error
+- localizedMessage:
+    locale: en-US
+    message: A g2-standard-4 VM instance with 1 nvidia-l4 accelerator(s) is currently
+      unavailable in the us-west1-c zone, because of gpu_availability root cause(s).
+      Consider trying your request in the us-west1-a zone(s), which currently has
+      capacity to accommodate your request. Alternatively, you can try your request
+      again with a different VM hardware configuration or at a later time. For more
+      information, see the troubleshooting documentation.
+- errorInfo:
+    domain: compute.googleapis.com
+    metadatas:
+      attachment: nvidia-l4:1
+      vmType: g2-standard-4
+      zone: us-west1-c
+      zonesAvailable: us-west1-a
+    reason: gpu_availability
+message: The zone 'projects/northam-ce-mlai-tpu/zones/us-west1-c' does not have enough
+  resources available to fulfill the request.  Try a different zone, or try again
+  later.
+
+Failed to create reservation retrying... attempt: 2
+Created [https://www.googleapis.com/compute/v1/projects/northam-ce-mlai-tpu/zones/us-west1-c/reservations/pm-l4-cluster-us-west1-c].
+Successfully created reservation
+Existing reservations count: 1
+Attempting to upsize reservation...
+ERROR: (gcloud.compute.reservations.update) Could not fetch resource:
+---
+code: ZONE_RESOURCE_POOL_EXHAUSTED
+errorDetails:
+- help:
+    links:
+    - description: Troubleshooting documentation
+      url: https://cloud.google.com/compute/docs/resource-error
+- localizedMessage:
+    locale: en-US
+    message: A g2-standard-4 VM instance with 1 nvidia-l4 accelerator(s) is currently
+      unavailable in the us-west1-c zone, because of gpu_availability root cause(s).
+      Consider trying your request in the us-west1-a zone(s), which currently has
+      capacity to accommodate your request. Alternatively, you can try your request
+      again with a different VM hardware configuration or at a later time. For more
+      information, see the troubleshooting documentation.
+- errorInfo:
+    domain: compute.googleapis.com
+    metadatas:
+      attachment: nvidia-l4:1
+      vmType: g2-standard-4
+      zone: us-west1-c
+      zonesAvailable: us-west1-a
+    reason: gpu_availability
+message: The zone 'projects/northam-ce-mlai-tpu/zones/us-west1-c' does not have enough
+  resources available to fulfill the request.  Try a different zone, or try again
+  later.
+
+Trying to upsize reservation again...
+ERROR: (gcloud.compute.reservations.update) Could not fetch resource:
+---
+code: ZONE_RESOURCE_POOL_EXHAUSTED
+errorDetails:
+- help:
+    links:
+    - description: Troubleshooting documentation
+      url: https://cloud.google.com/compute/docs/resource-error
+- localizedMessage:
+    locale: en-US
+    message: A g2-standard-4 VM instance with 1 nvidia-l4 accelerator(s) is currently
+      unavailable in the us-west1-c zone, because of gpu_availability root cause(s).
+      Alternatively, you can try your request again with a different VM hardware configuration
+      or at a later time. For more information, see the troubleshooting documentation.
+- errorInfo:
+    domain: compute.googleapis.com
+    metadatas:
+      attachment: nvidia-l4:1
+      vmType: g2-standard-4
+      zone: us-west1-c
+      zonesAvailable: ''
+    reason: gpu_availability
+message: The zone 'projects/northam-ce-mlai-tpu/zones/us-west1-c' does not have enough
+  resources available to fulfill the request.  Try a different zone, or try again
+  later.
+
+Failed to upsize reservation retrying... Attempt: 1
+Trying to upsize reservation again...

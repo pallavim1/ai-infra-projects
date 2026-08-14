@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: disk-cleaner
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: disk-cleaner
+  template:
+    metadata:
+      labels:
+        app: disk-cleaner
+    spec:
+      hostNetwork: true
+      hostPID: true
+      tolerations:
+      - operator: Exists
+      containers:
+      - name: cleaner
+        image: busybox:1.36
+        securityContext:
+          privileged: true
+        command: ["sh", "-c"]
+        args:
+        - |
+          echo "Purging old pod cache files from /var/lib/kubelet/pods/..."
+          rm -rf /host-root/var/lib/kubelet/pods/*/volumes/kubernetes.io~csi/*/mount/* 2>/dev/null || true
+          rm -rf /host-root/var/lib/kubelet/pods/*/volumes/kubernetes.io~empty-dir/* 2>/dev/null || true
+          rm -rf /host-root/tmp/gcsfuse* /host-root/var/cache/gcsfuse* 2>/dev/null || true
+          echo "Done clearing pod cache."
+          sleep 3600
+        volumeMounts:
+        - name: host-root
+          mountPath: /host-root
+      volumes:
+      - name: host-root
+        hostPath:
+          path: /
+          type: Directory

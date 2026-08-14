@@ -1,0 +1,94 @@
+Found existing reservation...
+Existing reservations count: 0
+Attempting to upsize reservation...
+ERROR: (gcloud.compute.reservations.update) Could not fetch resource:
+ - Resource 'projects/northam-ce-mlai-tpu/zones/us-central1-a/reservations/pm-l4-cluster-us-central1-a' has an ongoing conflicting operation: '[projects/northam-ce-mlai-tpu/zones/us-central1-a/operations/operation-1786482247892-658cbcfc87e01-825057f4-d2917953]'.
+
+Trying to upsize reservation again...
+ERROR: (gcloud.compute.reservations.update) Could not fetch resource:
+ - Resource 'projects/northam-ce-mlai-tpu/zones/us-central1-a/reservations/pm-l4-cluster-us-central1-a' has an ongoing conflicting operation: '[projects/northam-ce-mlai-tpu/zones/us-central1-a/operations/operation-1786482247892-658cbcfc87e01-825057f4-d2917953]'.
+
+Failed to upsize reservation retrying... Attempt: 1
+Trying to upsize reservation again...
+ERROR: (gcloud.compute.reservations.update) Could not fetch resource:
+ - Resource 'projects/northam-ce-mlai-tpu/zones/us-central1-a/reservations/pm-l4-cluster-us-central1-a' has an ongoing conflicting operation: '[projects/northam-ce-mlai-tpu/zones/us-central1-a/operations/operation-1786482247892-658cbcfc87e01-825057f4-d2917953]'.
+
+Failed to upsize reservation retrying... Attempt: 2
+Trying to upsize reservation again...
+ERROR: (gcloud.compute.reservations.update) Could not fetch resource:
+ - The resource 'projects/northam-ce-mlai-tpu/zones/us-central1-a/reservations/pm-l4-cluster-us-central1-a' was not found
+
+Failed to upsize reservation retrying... Attempt: 3
+Trying to upsize reservation again...
+ERROR: (gcloud.compute.reservations.update) Could not fetch resource:
+ - The resource 'projects/northam-ce-mlai-tpu/zones/us-central1-a/reservations/pm-l4-cluster-us-central1-a' was not found
+
+Failed to upsize reservation retrying... Attempt: 4
+Trying to upsize reservation again...
+ERROR: (gcloud.compute.reservations.update) Could not fetch resource:
+ - The resource 'projects/northam-ce-mlai-tpu/zones/us-central1-a/reservations/pm-l4-cluster-us-central1-a' was not found
+
+Failed to upsize reservation retrying... Attempt: 5
+Re-Scanning in 15 seconds
+Existing reservations count: 0
+Attempting to upsize reservation...
+ERROR: (gcloud.compute.reservations.update) Could not fetch resource:
+ - The resource 'projects/northam-ce-mlai-tpu/zones/us-central1-a/reservations/pm-l4-cluster-us-central1-a' was not found
+
+Trying to upsize reservation again...
+ERROR: (gcloud.compute.reservations.update) Could not fetch resource:
+ - The resource 'projects/northam-ce-mlai-tpu/zones/us-central1-a/reservations/pm-l4-cluster-us-central1-a' was not found
+
+Failed to upsize reservation retrying... Attempt: 1
+Trying to upsize reservation again...
+ERROR: (gcloud.compute.reservations.update) Could not fetch resource:
+ - The resource 'projects/northam-ce-mlai-tpu/zones/us-central1-a/reservations/pm-l4-cluster-us-central1-a' was not found
+
+Failed to upsize reservation retrying... Attempt: 2
+Trying to upsize reservation again...
+ERROR: (gcloud.compute.reservations.update) Could not fetch resource:
+ - The resource 'projects/northam-ce-mlai-tpu/zones/us-central1-a/reservations/pm-l4-cluster-us-central1-a' was not found
+
+Failed to upsize reservation retrying... Attempt: 3
+Trying to upsize reservation again...
+ERROR: (gcloud.compute.reservations.update) Could not fetch resource:
+ - The resource 'projects/northam-ce-mlai-tpu/zones/us-central1-a/reservations/pm-l4-cluster-us-central1-a' was not found
+
+Failed to upsize reservation retrying... Attempt: 4
+Trying to upsize reservation again...
+ERROR: (gcloud.compute.reservations.update) Could not fetch resource:
+ - The resource 'projects/northam-ce-mlai-tpu/zones/us-central1-a/reservations/pm-l4-cluster-us-central1-a' was not found
+
+Failed to upsize reservation retrying... Attempt: 5
+Re-Scanning in 15 seconds
+Existing reservations count: 0
+Attempting to upsize reservation...
+ERROR: (gcloud.compute.reservations.update) Could not fetch resource:
+ - The resource 'projects/northam-ce-mlai-tpu/zones/us-central1-a/reservations/pm-l4-cluster-us-central1-a' was not found
+
+Trying to upsize reservation again...
+ERROR: (gcloud.compute.reservations.update) Could not fetch resource:
+ - The resource 'projects/northam-ce-mlai-tpu/zones/us-central1-a/reservations/pm-l4-cluster-us-central1-a' was not found
+
+Failed to upsize reservation retrying... Attempt: 1
+Trying to upsize reservation again...
+ERROR: (gcloud.compute.reservations.update) Could not fetch resource:
+ - The resource 'projects/northam-ce-mlai-tpu/zones/us-central1-a/reservations/pm-l4-cluster-us-central1-a' was not found
+
+Failed to upsize reservation retrying... Attempt: 2
+Trying to upsize reservation again...
+ERROR: (gcloud.compute.reservations.update) Could not fetch resource:
+ - The resource 'projects/northam-ce-mlai-tpu/zones/us-central1-a/reservations/pm-l4-cluster-us-central1-a' was not found
+
+Failed to upsize reservation retrying... Attempt: 3
+Trying to upsize reservation again...
+ERROR: (gcloud.compute.reservations.update) Could not fetch resource:
+ - The resource 'projects/northam-ce-mlai-tpu/zones/us-central1-a/reservations/pm-l4-cluster-us-central1-a' was not found
+
+Failed to upsize reservation retrying... Attempt: 4
+Trying to upsize reservation again...
+ERROR: (gcloud.compute.reservations.update) Could not fetch resource:
+ - The resource 'projects/northam-ce-mlai-tpu/zones/us-central1-a/reservations/pm-l4-cluster-us-central1-a' was not found
+
+Failed to upsize reservation retrying... Attempt: 5
+Re-Scanning in 15 seconds

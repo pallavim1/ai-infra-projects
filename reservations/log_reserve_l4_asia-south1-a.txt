@@ -1,0 +1,23 @@
+No existing reservation creating...
+Attempting to create reservation...
+ERROR: (gcloud.compute.reservations.create) Could not fetch resource:
+ - Location ZONE:asia-south1-a violates constraint constraints/gcp.resourceLocations on the resource projects/northam-ce-mlai-tpu/zones/asia-south1-a/reservations/pm-l4-res-asia-south1-a.
+
+Failed to create reservation retrying... attempt: 1
+ERROR: (gcloud.compute.reservations.create) Could not fetch resource:
+ - Location ZONE:asia-south1-a violates constraint constraints/gcp.resourceLocations on the resource projects/northam-ce-mlai-tpu/zones/asia-south1-a/reservations/pm-l4-res-asia-south1-a.
+
+Failed to create reservation retrying... attempt: 2
+ERROR: (gcloud.compute.reservations.create) Could not fetch resource:
+ - Location ZONE:asia-south1-a violates constraint constraints/gcp.resourceLocations on the resource projects/northam-ce-mlai-tpu/zones/asia-south1-a/reservations/pm-l4-res-asia-south1-a.
+
+Failed to create reservation retrying... attempt: 3
+ERROR: (gcloud.compute.reservations.create) Could not fetch resource:
+ - Location ZONE:asia-south1-a violates constraint constraints/gcp.resourceLocations on the resource projects/northam-ce-mlai-tpu/zones/asia-south1-a/reservations/pm-l4-res-asia-south1-a.
+
+Failed to create reservation retrying... attempt: 4
+ERROR: (gcloud.compute.reservations.create) Could not fetch resource:
+ - Location ZONE:asia-south1-a violates constraint constraints/gcp.resourceLocations on the resource projects/northam-ce-mlai-tpu/zones/asia-south1-a/reservations/pm-l4-res-asia-south1-a.
+
+Failed to create reservation retrying... attempt: 5
+Re-Scanning in 15 seconds

@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: socket-fixer
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: socket-fixer
+  template:
+    metadata:
+      labels:
+        app: socket-fixer
+    spec:
+      hostNetwork: true
+      hostPID: true
+      tolerations:
+      - operator: Exists
+      containers:
+      - name: fixer
+        image: busybox:1.36
+        securityContext:
+          privileged: true
+        command: ["sh", "-c"]
+        args:
+        - |
+          echo "Recreating sockets directory under /var/lib/kubelet/plugins/..."
+          mkdir -p /host-plugins/sockets
+          chmod 777 /host-plugins/sockets
+          ls -la /host-plugins/sockets
+          sleep 3600
+        volumeMounts:
+        - name: host-plugins
+          mountPath: /host-plugins
+      volumes:
+      - name: host-plugins
+        hostPath:
+          path: /var/lib/kubelet/plugins/gcsfusecsi.storage.gke.io
+          type: DirectoryOrCreate

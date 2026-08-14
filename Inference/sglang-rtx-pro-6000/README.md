@@ -14,19 +14,21 @@ Optimized GKE configurations and benchmarks for serving LLMs on GCP G4 instances
 
 | Model | Quantization | Setup | Output Throughput (tok/s) | Total Throughput (tok/s) | Peak Throughput (tok/s) | TPOT (ms) |
 |-------|--------------|-------|---------------------------|--------------------------|-------------------------|-----------|
-| [deepseek-ai/DeepSeek-V3.2](./models/DeepSeekv3-2/fp8/results/benchmark_results.md) | FP8 | 2 Nodes (16x RTX 6000) | 2962.79 | 3324.21 | 4951.00 | 149.29 |
-| [nvidia/DeepSeek-V3.2-NVFP4](./models/DeepSeekv3-2/nvp4/results/benchmark_results.md) | NVFP4 | 1 Node (8x RTX 6000) | 2675.33 | 3012.42 | 2046.00 | 106.03 |
-| [zai-org/GLM-5.1-FP8](./models/GLM5.1/results/benchmark-results.md) | FP8 | 2 Nodes (16x RTX 6000) | 2785.55 | 3125.35 | 4092.00 | 155.26 |
-| [lukealonso/GLM-5.1-NVFP4](./models/GLM5.1/nvfp4/results/benchmark_results_1node.md) | NVFP4 | 1 Node (8x RTX 6000) | 1490.31 | 1672.11 | 734.00 | 73.82 |
-| [lukealonso/GLM-5.1-NVFP4](./models/GLM5.1/nvfp4/results/benchmark_results_2node.md) | NVFP4 | 2 Nodes (16x RTX 6000) | 3075.85 | 3451.06 | 4606.00 | 141.36 |
-| [moonshotai/Kimi-K2.5](./models/KimiK2.5/results/benchmark_results.md) | INT4* | 2 Nodes (16x RTX 6000) | 3152.79 | 3537.39 | 4793.00 | 136.52 |
+| [nvidia/Kimi-K2.6-NVFP4](./models/KimiK2.6/nvfp4/results/benchmark-results.md) | NVFP4 | 2 Nodes (16x RTX 6000) | 3261.28 | 3662.79 | 4725.00 | 138.54 |
+| [moonshotai/Kimi-K2.6](./models/KimiK2.6/results/benchmark_results.md) (wip)| INT4* | 1 Node (8x RTX 6000) (not optimized) | 1459.26 | 1637.28 | 850.00 | 82.43 |
 | [nvidia/Kimi-K2.5-NVFP4](./models/KimiK2.5/nvfp4/results/benchmarks_2node.yaml) | NVFP4 | 2 Nodes (16x RTX 6000) | 3237.46 | 3632.39 | 5535.00 | 137.89 |
-| [moonshotai/Kimi-K2.6](./models/KimiK2.6/results/benchmark_results.md) | INT4* | 1 Node (8x RTX 6000) | 1459.26 | 1637.28 | 850.00 | 82.43 |
+| [moonshotai/Kimi-K2.5](./models/KimiK2.5/results/benchmark_results.md) | INT4* | 2 Nodes (16x RTX 6000) | 3152.79 | 3537.39 | 4793.00 | 136.52 |
+| [lukealonso/GLM-5.1-NVFP4](./models/GLM5.1/nvfp4/results/benchmark_results_2node.md) | NVFP4 | 2 Nodes (16x RTX 6000) | 3075.85 | 3451.06 | 4606.00 | 141.36 |
+| [lukealonso/GLM-5.1-NVFP4](./models/GLM5.1/nvfp4/results/benchmark_results_1node.md) | NVFP4 | 1 Node (8x RTX 6000) | 1490.31 | 1672.11 | 734.00 | 73.82 |
+| [zai-org/GLM-5.1-FP8](./models/GLM5.1/results/benchmark-results.md) | FP8 | 2 Nodes (16x RTX 6000) | 2785.55 | 3125.35 | 4092.00 | 155.26 |
+| [nvidia/DeepSeek-V3.2-NVFP4](./models/DeepSeekv3-2/nvp4/results/benchmark_results.md) | NVFP4 | 1 Node (8x RTX 6000) | 2675.33 | 3012.42 | 2046.00 | 106.03 |
+| [deepseek-ai/DeepSeek-V3.2](./models/DeepSeekv3-2/fp8/results/benchmark_results.md) | FP8 | 2 Nodes (16x RTX 6000) | 2962.79 | 3324.21 | 4951.00 | 149.29 |
+| [Qwen/Qwen3.5-397B-A17B-FP8](./models/Qwen3.5-397B-A17B-FP8/results/hicache/benchmark_results.md) | FP8 | 1 Node (8x RTX 6000) | 390.65 | 8202.16 | 1120.00 | 100.59 |
 | [datalab-to/chandra-ocr-2](./models/datalab2-ocr/benchmark_results.md)** | BF16| 1 Node (1x RTX 6000)| 2600.67 | 5267.08 | 4603.00| 32.47 |
 
 **[openai/whisper-large-v3](./models/whisper-v3-large/results/benchmark_results.md)** - Since this is ASR model, we did not apply the standard ISL/OSL of 1K/8K and concurrancy of 512.
 
-*Table last updated: May 22, 2026*
+*Table last updated: June 11, 2026*
  
 *Benchmarks conducted using `inf` request rate and 512 max concurrency. Tests utilized a random dataset with 1024 input tokens and 8192 output tokens (1536 total prompts). The load generator was isolated on a dedicated CPU-only node pool to ensure zero interference with GPU performance.*
 
@@ -79,6 +81,26 @@ Focuses on latency characteristics of an ultra-large MoE model, comparing perfor
 | **Median TPOT (ms)** | 101.18 | **90.41** |
 | **Mean TPOT (ms)** | 100.59 | **90.45** |
 
+## [nvidia/Kimi-K2.6-NVFP4](./models/KimiK2.6/nvfp4/results/batch_one_bench_results.md) Batch Throughput Benchmark
+[Detailed Configuration & Results](./models/KimiK2.6/nvfp4/)
+
+This benchmark measures the raw throughput of the **Kimi-K2.6 NVFP4** model using a single large batch to evaluate peak processing capabilities on a 2-node setup.
+
+### Benchmark Settings
+- **Configuration**:
+  - **Batch size**: 512
+  - **Input sequence length**: 1024 tokens
+  - **Output sequence length**: 8192 tokens
+  - **Setup**: 2 Nodes (16x RTX 6000)
+  - **Quantization**: FP4 (`modelopt_fp4`)
+
+| Metric | Value |
+| --- | --- |
+| **Input Prefill Throughput** | **15,881.61 tokens/s** |
+| **Output Decode Throughput** | **3,690.98 tokens/s** |
+| **Overall Token Throughput** | **4,035.13 tokens/s** |
+| **Average Generation Speed** | **487.34 tokens/s (per rank)** |
+
 ## Project Structure
 
 - `models/`: Model-specific SGLang job configurations and benchmarks.
@@ -92,7 +114,8 @@ Focuses on latency characteristics of an ultra-large MoE model, comparing perfor
   - `agentic_benchmark/`: Scripts for simulating agentic workloads.
 - `gcp_g4_specs.md`: Detailed hardware and infrastructure specifications.
 
-## Key Updates (May 2026)
+## Key Updates (June 2026)
+- **Native FP4 Support for Kimi K2.6**: Successfully optimized and benchmarked Kimi-K2.6 using native NVFP4 quantization on a 2-node (16x GPU) setup, achieving over 3000 tok/s output throughput.
 - **Qwen3.5-397B Validation**: Successfully benchmarked the 397B MoE model on a single node using FP8 and HiCache, showing massive TTFT improvements.
 - **Agentic Benchmarking**: Introduced agentic trace simulation for Kimi K2.6, achieving over 80% cache hit rate with HiCache.
 - **Kimi-K2.5 NVFP4 Validation**: Successfully optimized and benchmarked Kimi-K2.5 using native NVFP4 quantization on a 2-node (16x GPU) setup.
@@ -119,6 +142,7 @@ Detailed performance logs, including TTFT/TPOT latency distributions and through
 - [moonshotai/Kimi-K2.5 (INT4): models/KimiK2.5/results/benchmark_results.md](./models/KimiK2.5/results/benchmark_results.md)
 - [nvidia/Kimi-K2.5-NVFP4 (NVFP4): models/KimiK2.5/nvfp4/results/benchmarks_2node.yaml](./models/KimiK2.5/nvfp4/results/benchmarks_2node.yaml)
 - [moonshotai/Kimi-K2.6 (Standard): models/KimiK2.6/results/benchmark_results.md](./models/KimiK2.6/results/benchmark_results.md)
+- [nvidia/Kimi-K2.6-NVFP4 (NVFP4): models/KimiK2.6/nvfp4/results/benchmark-results.md](./models/KimiK2.6/nvfp4/results/benchmark-results.md)
 - [datalab-to/chandra-ocr-2: models/datalab2-ocr/benchmark_results.md](./models/datalab2-ocr/benchmark_results.md)
 - [openai/whisper-large-v3: models/whisper-v3-large/results/benchmark_results.md](./models/whisper-v3-large/results/benchmark_results.md)
 

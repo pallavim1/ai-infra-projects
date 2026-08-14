@@ -104,6 +104,7 @@ spec:
 
           python3 -m sglang.launch_server \
               --model-path /models \
+              --served-model-name kimi-k2.6 \
               --tensor-parallel-size 8 \
               --pipeline-parallel-size 2 \
               --nnodes 2 \

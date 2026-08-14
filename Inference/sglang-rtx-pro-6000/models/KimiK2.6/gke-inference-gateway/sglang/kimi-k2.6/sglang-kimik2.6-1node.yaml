@@ -50,7 +50,7 @@ spec:
       hostIPC: true
       dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
-        cloud.google.com/gke-nodepool: reflection-g4-pool 
+        cloud.google.com/gke-nodepool: pm-8x-rtx6000-2nic-pool 
       tolerations:
       - key: nvidia.com/gpu
         operator: Exists
@@ -99,22 +99,6 @@ spec:
           value: "18000"
         - name: SGLANG_ENABLE_SPEC_V2
           value: "1"
-        - name: NCCL_DEBUG
-          value: INFO
-        - name: NCCL_SOCKET_IFNAME
-          value: "eth0,eth1"
-        - name: NCCL_IB_DISABLE
-          value: "1"
-        - name: NCCL_P2P_LEVEL
-          value: "SYS"
-        - name: NCCL_SOCKET_NTHREADS
-          value: "8"
-        - name: NCCL_NSOCKS_PERTHREAD
-          value: "8"
-        - name: NCCL_MIN_NCHANNELS
-          value: "8"
-        - name: NCCL_ALLOC_P2P_NET_LL_BUFFERS
-          value: "1"
         - name: OMP_NUM_THREADS
           value: "24"
         - name: SGLANG_SET_CPU_AFFINITY
@@ -123,41 +107,21 @@ spec:
           value: "1"
         - name: PYTORCH_CUDA_ALLOC_CONF
           value: "expandable_segments:True"
-        - name: SGLANG_ENABLE_DEEP_GEMM
-          value: "0"
-        - name: SGLANG_ENABLE_JIT_DEEPGEMM
-          value: "0"
         command: ["python3", "-m", "sglang.launch_server"]
         args:
         - --model-path=/models
+        - --served-model-name=kimi-k2.6
         - --tp=8
         - --kv-cache-dtype=fp8_e4m3
         - --trust-remote-code
         - --reasoning-parser=kimi_k2
         - --tool-call-parser=kimi_k2
-        - --speculative-algorithm=EAGLE3
-        - --speculative-draft-model-path=lightseekorg/kimi-k2.5-eagle3
-        - --speculative-num-steps=3
-        - --speculative-eagle-topk=1
-        - --speculative-num-draft-tokens=4
-        - --enable-hierarchical-cache
-        - --page-size=64
-        - --hicache-ratio=2.0
-        - --hicache-io-backend=kernel
-        - --hicache-mem-layout=page_first
-        - --hicache-write-policy=write_through
-        - --hicache-storage-prefetch-policy=timeout
-        - --enable-cache-report
-        - --enable-metrics
-        - --schedule-policy=lpm
-        - --schedule-conservativeness=0.3
-        - --chunked-prefill-size=16384
-        - --enable-mixed-chunk
-        - --context-length=131072
-        - --max-running-requests=128
-        - --mem-fraction-static=0.88
+        - --context-length=32768
+        - --chunked-prefill-size=4096
+        - --max-running-requests=64
+        - --mem-fraction-static=0.85
         - --attention-backend=flashinfer
-        - --enable-p2p-check
+        - --disable-cuda-graph
         - --host=0.0.0.0
         - --port=30000
         resources:
@@ -173,8 +137,8 @@ spec:
           driver: gcsfuse.csi.storage.gke.io
           readOnly: true
           volumeAttributes:
-            bucketName: shivaji-sglang-kimi-us-central1
-            mountOptions: "implicit-dirs,only-dir=kimi-k2.6,file-cache:max-size-mb:900000,file-cache:enable-parallel-downloads:true,file-cache:parallel-downloads-per-file:16,file-cache:max-parallel-downloads:-1,file-cache:download-chunk-size-mb:50,file-cache:cache-file-for-range-read:true,metadata-cache:ttl-secs:-1,metadata-cache:stat-cache-max-size-mb:-1,metadata-cache:type-cache-max-size-mb:-1"
+            bucketName: pallaviam-sglang-kimi-us-east5
+            mountOptions: "implicit-dirs,only-dir=kimi-k2.6,file-cache:max-size-mb:0,metadata-cache:ttl-secs:-1,metadata-cache:stat-cache-max-size-mb:-1,metadata-cache:type-cache-max-size-mb:-1"
       - name: dshm
         emptyDir:
           medium: Memory

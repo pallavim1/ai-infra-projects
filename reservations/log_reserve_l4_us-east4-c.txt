@@ -1,0 +1,6 @@
+No existing reservation creating...
+Attempting to create reservation...
+ERROR: (gcloud.compute.reservations.create) Could not fetch resource:
+ - Internal error. Please try again or contact Google Support. (Code: '658CAC5C2DB78.4D100DF.F36B729')
+
+Failed to create reservation retrying... attempt: 1

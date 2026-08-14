@@ -57,11 +57,10 @@ export GPU_MACHINE_TYPE="${GPU_MACHINE_TYPE:-g4-standard-384}"
 export COMPUTE_MACHINE_TYPE="${COMPUTE_MACHINE_TYPE:-n2-standard-64}"
 export GPU_POOL_MIN_NODES="${GPU_POOL_MIN_NODES:-2}"
 export GPU_POOL_MAX_NODES="${GPU_POOL_MAX_NODES:-3}"
-export GPU_DISK_SIZE="${GPU_DISK_SIZE:-100}"
 
 # Paths
-export CLOUDSDK_PYTHON="${CLOUDSDK_PYTHON:-/usr/bin/python3}"
-export GCLOUD_PATH="${GCLOUD_PATH:-$HOME/google-cloud-sdk/bin/gcloud}"
+export CLOUDSDK_PYTHON="${CLOUDSDK_PYTHON:-/usr/local/bin/python3.13}"
+export GCLOUD_PATH="${GCLOUD_PATH:-/Users/shivajid/google-cloud-sdk/bin/gcloud}"
 
 # Set default project
 # Set the default Google Cloud project for subsequent gcloud commands.
@@ -202,7 +201,6 @@ ${GCLOUD_PATH} beta container node-pools create ${GPU_POOL_NAME} \
      --ephemeral-storage-local-ssd=count=32 \
      --enable-image-streaming \
      --workload-metadata=GKE_METADATA \
-     --disk-size=${GPU_DISK_SIZE} \
      --scopes=https://www.googleapis.com/auth/cloud-platform \
      --additional-node-network=network=${NETWORK_NAME},subnetwork=${SUBNETWORK_NAME_2} \
      --additional-pod-network=subnetwork=${SUBNETWORK_NAME_2},pod-ipv4-range=$USER-additional-test-pods,max-pods-per-node=32

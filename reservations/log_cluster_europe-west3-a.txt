@@ -1,0 +1,110 @@
+No existing reservation creating...
+Attempting to create reservation...
+ERROR: (gcloud.compute.reservations.create) Could not fetch resource:
+---
+code: ZONE_RESOURCE_POOL_EXHAUSTED
+errorDetails:
+- help:
+    links:
+    - description: Troubleshooting documentation
+      url: https://cloud.google.com/compute/docs/resource-error
+- localizedMessage:
+    locale: en-US
+    message: A g2-standard-4 VM instance with 1 nvidia-l4 accelerator(s) is currently
+      unavailable in the europe-west3-a zone, because of gpu_availability root cause(s).
+      Alternatively, you can try your request again with a different VM hardware configuration
+      or at a later time. For more information, see the troubleshooting documentation.
+- errorInfo:
+    domain: compute.googleapis.com
+    metadatas:
+      attachment: nvidia-l4:1
+      vmType: g2-standard-4
+      zone: europe-west3-a
+      zonesAvailable: ''
+    reason: gpu_availability
+message: The zone 'projects/northam-ce-mlai-tpu/zones/europe-west3-a' does not have
+  enough resources available to fulfill the request.  Try a different zone, or try
+  again later.
+
+Failed to create reservation retrying... attempt: 1
+ERROR: (gcloud.compute.reservations.create) Could not fetch resource:
+---
+code: ZONE_RESOURCE_POOL_EXHAUSTED
+errorDetails:
+- help:
+    links:
+    - description: Troubleshooting documentation
+      url: https://cloud.google.com/compute/docs/resource-error
+- localizedMessage:
+    locale: en-US
+    message: A g2-standard-4 VM instance with 1 nvidia-l4 accelerator(s) is currently
+      unavailable in the europe-west3-a zone, because of gpu_availability root cause(s).
+      Alternatively, you can try your request again with a different VM hardware configuration
+      or at a later time. For more information, see the troubleshooting documentation.
+- errorInfo:
+    domain: compute.googleapis.com
+    metadatas:
+      attachment: nvidia-l4:1
+      vmType: g2-standard-4
+      zone: europe-west3-a
+      zonesAvailable: ''
+    reason: gpu_availability
+message: The zone 'projects/northam-ce-mlai-tpu/zones/europe-west3-a' does not have
+  enough resources available to fulfill the request.  Try a different zone, or try
+  again later.
+
+Failed to create reservation retrying... attempt: 2
+ERROR: (gcloud.compute.reservations.create) Could not fetch resource:
+---
+code: ZONE_RESOURCE_POOL_EXHAUSTED
+errorDetails:
+- help:
+    links:
+    - description: Troubleshooting documentation
+      url: https://cloud.google.com/compute/docs/resource-error
+- localizedMessage:
+    locale: en-US
+    message: A g2-standard-4 VM instance with 1 nvidia-l4 accelerator(s) is currently
+      unavailable in the europe-west3-a zone, because of gpu_availability root cause(s).
+      Alternatively, you can try your request again with a different VM hardware configuration
+      or at a later time. For more information, see the troubleshooting documentation.
+- errorInfo:
+    domain: compute.googleapis.com
+    metadatas:
+      attachment: nvidia-l4:1
+      vmType: g2-standard-4
+      zone: europe-west3-a
+      zonesAvailable: ''
+    reason: gpu_availability
+message: The zone 'projects/northam-ce-mlai-tpu/zones/europe-west3-a' does not have
+  enough resources available to fulfill the request.  Try a different zone, or try
+  again later.
+
+Failed to create reservation retrying... attempt: 3
+ERROR: (gcloud.compute.reservations.create) Could not fetch resource:
+---
+code: ZONE_RESOURCE_POOL_EXHAUSTED
+errorDetails:
+- help:
+    links:
+    - description: Troubleshooting documentation
+      url: https://cloud.google.com/compute/docs/resource-error
+- localizedMessage:
+    locale: en-US
+    message: A g2-standard-4 VM instance with 1 nvidia-l4 accelerator(s) is currently
+      unavailable in the europe-west3-a zone, because of gpu_availability root cause(s).
+      Alternatively, you can try your request again with a different VM hardware configuration
+      or at a later time. For more information, see the troubleshooting documentation.
+- errorInfo:
+    domain: compute.googleapis.com
+    metadatas:
+      attachment: nvidia-l4:1
+      vmType: g2-standard-4
+      zone: europe-west3-a
+      zonesAvailable: ''
+    reason: gpu_availability
+message: The zone 'projects/northam-ce-mlai-tpu/zones/europe-west3-a' does not have
+  enough resources available to fulfill the request.  Try a different zone, or try
+  again later.
+
+Failed to create reservation retrying... attempt: 4
