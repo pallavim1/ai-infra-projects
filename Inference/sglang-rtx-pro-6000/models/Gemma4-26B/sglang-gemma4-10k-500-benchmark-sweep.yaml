@@ -32,12 +32,12 @@ spec:
       OUTPUT_DIR="/results/10k_500"
       INPUT_LEN=10240
       OUTPUT_LEN=500
-      CONCURRENCIES=(32)
+      CONCURRENCIES=(1 8 16 32)
 
       mkdir -p "${OUTPUT_DIR}"
 
       echo "=========================================================================================="
-      echo "🚀 Starting SGLang Benchmark: 10K Input / 500 Output (C=32) for Gemma-4-26B-A4B"
+      echo "🚀 Starting SGLang Benchmark: 10K Input / 500 Output (C=1, 8, 16, 32) for Gemma-4-26B-A4B"
       echo "Endpoint      : ${API_URL}"
       echo "Model         : ${MODEL_NAME}"
       echo "Input Length  : ${INPUT_LEN} tokens (10K)"
@@ -48,6 +48,9 @@ spec:
 
       for c in "${CONCURRENCIES[@]}"; do
           NUM_PROMPTS=$((c * 2))
+          if [ "${NUM_PROMPTS}" -lt 8 ]; then
+              NUM_PROMPTS=8
+          fi
           RESULT_FILE="${OUTPUT_DIR}/result_10k_500_c${c}.json"
 
           echo ""
@@ -83,7 +86,7 @@ spec:
 
       output_dir = "/results/10k_500"
       model_name = "google/gemma-4-26B-A4B"
-      concurrencies = [32]
+      concurrencies = [1, 8, 16, 32]
 
       results = []
       for c in concurrencies:
@@ -100,7 +103,7 @@ spec:
       report_lines = [
           f"# SGLang Benchmark Report: `{model_name}` (10K Input / 500 Output - 1x GPU TP=1)",
           "",
-          f"Performance benchmark at concurrency **32** for **{model_name}** served on **1x NVIDIA RTX PRO 6000 Blackwell GPU (TP=1, FP8)**.",
+          f"Performance benchmark across concurrency levels **1, 8, 16, 32** for **{model_name}** served on **1x NVIDIA RTX PRO 6000 Blackwell GPU (TP=1, FP8)**.",
           "",
           "- **Input Length**: 10,240 tokens (10K)",
           "- **Max Output Length**: 500 tokens",
@@ -109,7 +112,7 @@ spec:
           "",
           "---",
           "",
-          "## 📊 Concurrency 32 Benchmark Results (Median & P99 Metrics)",
+          "## 📊 Concurrency Sweep Summary (Median & P99 Metrics)",
           "",
           "| Concurrency | Completed Req | Output Tok/s | Input Tok/s | Total Tok/s | Req/s | Median TTFT (ms) | P99 TTFT (ms) | Median TPOT (ms) | P99 TPOT (ms) | Median ITL (ms) | Median Latency (s) | P99 Latency (s) |",
           "| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |",
