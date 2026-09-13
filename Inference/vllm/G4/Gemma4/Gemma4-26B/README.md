@@ -4,7 +4,8 @@ This directory contains deployment manifests, benchmark execution scripts, and c
 
 ## Files Included
 
-- [`results/sglang_benchmark_10k_500_report.md`](./results/sglang_benchmark_10k_500_report.md): **10K Input / 500 Output Concurrency Sweep Report (C=1 to 512)** on GKE `g4-standard-48` (`pm-g4-sglang-cluster`), matching upstream structure.
+- [`results/vllm_benchmark_10k_500_report.md`](./results/vllm_benchmark_10k_500_report.md): **10K Input / 500 Output Native vLLM Concurrency Sweep Report (C=1 to 512)** using `vllm bench serve` on GKE `g4-standard-48` (`pm-g4-sglang-cluster`).
+- [`results/sglang_benchmark_10k_500_report.md`](./results/sglang_benchmark_10k_500_report.md): **10K Input / 500 Output Concurrency Sweep Report (C=1 to 512)** using `sglang.bench_serving` on GKE `g4-standard-48` (`pm-g4-sglang-cluster`).
 - [`vllm_gemma4_26b_g4_1GPU.yaml`](./vllm_gemma4_26b_g4_1GPU.yaml): GKE StatefulSet + Service manifest for serving `google/gemma-4-26B-A4B` with vLLM on `g4-standard-48` (TP=1, FP8).
 - [`sglang-gemma4-10k-500-benchmark-sweep.yaml`](./sglang-gemma4-10k-500-benchmark-sweep.yaml): Automated GKE benchmark runner pod executing `sglang.bench_serving` across concurrencies 1, 8, 16, 32, 64, 128, 256, 512.
 - [`vllm-gemma4-10k-500-benchmark-sweep.yaml`](./vllm-gemma4-10k-500-benchmark-sweep.yaml): Automated GKE benchmark runner pod executing native `vllm bench serve` across concurrencies 1, 8, 16, 32, 64, 128, 256, 512.
