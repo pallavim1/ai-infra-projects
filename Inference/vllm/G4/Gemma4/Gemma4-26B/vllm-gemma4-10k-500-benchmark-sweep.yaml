@@ -14,7 +14,7 @@ spec:
     image: vllm/vllm-openai:gemma4
     env:
     - name: VLLM_HOST
-      value: "vllm-gemma4-1node-1gpu-service"
+      value: "vllm-gemma4-service"
     - name: VLLM_PORT
       value: "8000"
     - name: MODEL_NAME

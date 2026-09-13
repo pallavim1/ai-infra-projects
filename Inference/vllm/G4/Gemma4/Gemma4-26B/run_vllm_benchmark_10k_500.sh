@@ -7,7 +7,7 @@ set -eo pipefail
 # ==============================================================================
 # Usage:
 #   # 1. Against an already-running vLLM server (e.g. GKE Service or localhost):
-#   VLLM_HOST="vllm-gemma4-1node-1gpu-service" VLLM_PORT="8000" ./run_vllm_benchmark_10k_500.sh
+#   VLLM_HOST="vllm-gemma4-service" VLLM_PORT="8000" ./run_vllm_benchmark_10k_500.sh
 #
 #   # 2. Or inside a running Docker container on GCE:
 #   CONTAINER_NAME="vllm-gemma4-1node-1gpu" ./run_vllm_benchmark_10k_500.sh
