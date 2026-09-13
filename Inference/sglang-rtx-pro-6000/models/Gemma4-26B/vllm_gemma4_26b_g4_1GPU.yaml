@@ -42,7 +42,7 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
-        cloud.google.com/gke-nodepool: g4-384-np-1
+        cloud.google.com/gke-accelerator: nvidia-rtx-pro-6000
       tolerations:
       - key: "nvidia.com/gpu"
         operator: "Exists"
@@ -78,11 +78,8 @@ spec:
         - containerPort: 8000
           name: http
         env:
-        - name: HF_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: hf-secret
-              key: HF_TOKEN
+        - name: PYTHONUNBUFFERED
+          value: "1"
         - name: OMP_NUM_THREADS
           value: "16"
         - name: PYTORCH_CUDA_ALLOC_CONF

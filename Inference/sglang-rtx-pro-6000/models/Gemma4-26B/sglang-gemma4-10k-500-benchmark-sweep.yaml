@@ -7,7 +7,7 @@ metadata:
     app: sglang-gemma4-10k-500-benchmark-runner
 spec:
   nodeSelector:
-    cloud.google.com/gke-nodepool: cpu-bench-pool
+    cloud.google.com/gke-nodepool: default-pool
   restartPolicy: Never
   volumes:
   - name: results-vol
@@ -16,11 +16,6 @@ spec:
   - name: benchmark-runner
     image: docker.io/lmsysorg/sglang:v0.5.10.post1
     env:
-    - name: HF_TOKEN
-      valueFrom:
-        secretKeyRef:
-          name: hf-secret
-          key: HF_TOKEN
     - name: PYTHONUNBUFFERED
       value: "1"
     volumeMounts:
@@ -37,12 +32,12 @@ spec:
       OUTPUT_DIR="/results/10k_500"
       INPUT_LEN=10240
       OUTPUT_LEN=500
-      CONCURRENCIES=(32 64 128 256 512)
+      CONCURRENCIES=(32)
 
       mkdir -p "${OUTPUT_DIR}"
 
       echo "=========================================================================================="
-      echo "🚀 Starting SGLang Benchmark Sweep: 10K Input / 500 Output for Gemma-4-26B-A4B"
+      echo "🚀 Starting SGLang Benchmark: 10K Input / 500 Output (C=32) for Gemma-4-26B-A4B"
       echo "Endpoint      : ${API_URL}"
       echo "Model         : ${MODEL_NAME}"
       echo "Input Length  : ${INPUT_LEN} tokens (10K)"
@@ -88,7 +83,7 @@ spec:
 
       output_dir = "/results/10k_500"
       model_name = "google/gemma-4-26B-A4B"
-      concurrencies = [32, 64, 128, 256, 512]
+      concurrencies = [32]
 
       results = []
       for c in concurrencies:
@@ -103,18 +98,18 @@ spec:
                   print(f"Error reading {p}: {e}")
 
       report_lines = [
-          f"# SGLang Benchmark Report: `{model_name}` (10K Input / 500 Output - 2x GPU TP=2)",
+          f"# SGLang Benchmark Report: `{model_name}` (10K Input / 500 Output - 1x GPU TP=1)",
           "",
-          f"Performance sweep across concurrency levels **32 to 512** for **{model_name}** served on **2x NVIDIA RTX PRO 6000 Blackwell GPUs (TP=2, FP8)**.",
+          f"Performance benchmark at concurrency **32** for **{model_name}** served on **1x NVIDIA RTX PRO 6000 Blackwell GPU (TP=1, FP8)**.",
           "",
           "- **Input Length**: 10,240 tokens (10K)",
           "- **Max Output Length**: 500 tokens",
-          "- **Backend**: vLLM OpenAI API Server (TP=2)",
-          "- **Client**: `sglang.bench_serving` on `cpu-bench-pool`",
+          "- **Backend**: vLLM OpenAI API Server (TP=1)",
+          "- **Client**: `sglang.bench_serving` on `default-pool`",
           "",
           "---",
           "",
-          "## 📊 Concurrency Sweep Summary (Median & P99 Metrics)",
+          "## 📊 Concurrency 32 Benchmark Results (Median & P99 Metrics)",
           "",
           "| Concurrency | Completed Req | Output Tok/s | Input Tok/s | Total Tok/s | Req/s | Median TTFT (ms) | P99 TTFT (ms) | Median TPOT (ms) | P99 TPOT (ms) | Median ITL (ms) | Median Latency (s) | P99 Latency (s) |",
           "| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |",
@@ -158,8 +153,8 @@ spec:
       sleep infinity
     resources:
       requests:
-        cpu: "8"
-        memory: "16Gi"
+        cpu: "2"
+        memory: "4Gi"
       limits:
-        cpu: "32"
-        memory: "64Gi"
+        cpu: "4"
+        memory: "8Gi"
