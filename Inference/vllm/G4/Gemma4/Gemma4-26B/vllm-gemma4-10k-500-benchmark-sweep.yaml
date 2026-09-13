@@ -7,6 +7,8 @@ metadata:
     app: vllm-gemma4-10k-500-benchmark-runner
 spec:
   restartPolicy: Never
+  nodeSelector:
+    cloud.google.com/gke-nodepool: benchmark-client-pool
   containers:
   - name: vllm-benchmark
     image: vllm/vllm-openai:gemma4
