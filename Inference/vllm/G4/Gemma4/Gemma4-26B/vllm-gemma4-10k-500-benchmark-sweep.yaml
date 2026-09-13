@@ -1,0 +1,121 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vllm-gemma4-10k-500-benchmark-runner
+  namespace: default
+  labels:
+    app: vllm-gemma4-10k-500-benchmark-runner
+spec:
+  restartPolicy: Never
+  containers:
+  - name: vllm-benchmark
+    image: vllm/vllm-openai:gemma4
+    env:
+    - name: VLLM_HOST
+      value: "vllm-gemma4-1node-1gpu-service"
+    - name: VLLM_PORT
+      value: "8000"
+    - name: MODEL_NAME
+      value: "google/gemma-4-26B-A4B"
+    command: ["/bin/bash", "-c"]
+    args:
+      - |
+        set -euo pipefail
+        mkdir -p /results/vllm_10k_500
+
+        echo "Waiting for vLLM server (${VLLM_HOST}:${VLLM_PORT}) to be ready..."
+        until curl -sf "http://${VLLM_HOST}:${VLLM_PORT}/v1/models" > /dev/null; do
+          echo "vLLM server not ready yet, sleeping 15s..."
+          sleep 15
+        done
+        echo "vLLM server is READY!"
+
+        CONCURRENCIES=(1 8 16 32 64 128 256 512)
+        INPUT_LEN=10240
+        OUTPUT_LEN=500
+
+        for C in "${CONCURRENCIES[@]}"; do
+          if [ "$C" -eq 1 ]; then
+            NUM_PROMPTS=8
+          else
+            NUM_PROMPTS=$((C * 2))
+          fi
+          OUT_JSON="/results/vllm_10k_500/result_vllm_10k_500_c${C}.json"
+          echo "===================================================================="
+          echo "Running vllm bench serve: Concurrency=${C}, Num Prompts=${NUM_PROMPTS}, Input=${INPUT_LEN}, Output=${OUTPUT_LEN}"
+          echo "===================================================================="
+          vllm bench serve \
+            --backend vllm \
+            --host "${VLLM_HOST}" \
+            --port "${VLLM_PORT}" \
+            --model "${MODEL_NAME}" \
+            --dataset-name random \
+            --random-input-len "${INPUT_LEN}" \
+            --random-output-len "${OUTPUT_LEN}" \
+            --random-range-ratio 0.0 \
+            --num-prompts "${NUM_PROMPTS}" \
+            --max-concurrency "${C}" \
+            --request-rate inf \
+            --ignore-eos \
+            --percentile-metrics ttft,tpot,itl,e2el \
+            --metric-percentiles 50,95,99 \
+            --save-result \
+            --result-dir /results/vllm_10k_500 \
+            --result-filename "result_vllm_10k_500_c${C}.json" \
+            2>&1 | tee "/results/vllm_10k_500/bench_vllm_c${C}.log"
+        done
+
+        python3 - << 'EOF'
+        import json, os
+
+        concurrencies = [1, 8, 16, 32, 64, 128, 256, 512]
+        rows = {}
+        for c in concurrencies:
+            path = f"/results/vllm_10k_500/result_vllm_10k_500_c{c}.json"
+            if os.path.exists(path):
+                with open(path) as f:
+                    rows[c] = json.load(f)
+
+        report_lines = [
+            "# Gemma 4 26B vLLM Benchmark Report (10K Input / 500 Output)",
+            "",
+            "**Configuration**",
+            "- **Model**: `google/gemma-4-26B-A4B`",
+            "- **Input Prompt Length**: 10,240 tokens (10K Context)",
+            "- **Max Output Tokens**: 500 tokens",
+            "- **Framework**: vLLM Serving (`vllm/vllm-openai:gemma4`) + vLLM Benchmark CLI (`vllm bench serve`)",
+            "- **Hardware**: 1x NVIDIA RTX PRO 6000 Blackwell Server Edition (GKE `g4-standard-48`, TP=1)",
+            "",
+            "---",
+            "",
+            "## 1. Concurrency Sweep Summary Table",
+            "",
+            "| Concurrency | Prompts | Output Tok/s | Total Tok/s | Mean TTFT (ms) | Median TTFT (ms) | P99 TTFT (ms) | Mean TPOT (ms) | Median TPOT (ms) | P99 TPOT (ms) | Mean Latency (s) | Median Latency (s) | P99 Latency (s) |",
+            "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |"
+        ]
+
+        for c in concurrencies:
+            d = rows.get(c, {})
+            prompts = d.get("completed", c * 2 if c > 1 else 8)
+            out_tps = d.get("output_throughput", 0.0)
+            tot_tps = d.get("total_token_throughput", 0.0)
+            mean_ttft = d.get("mean_ttft_ms", 0.0)
+            med_ttft = d.get("median_ttft_ms", 0.0)
+            p99_ttft = d.get("p99_ttft_ms", 0.0)
+            mean_tpot = d.get("mean_tpot_ms", 0.0)
+            med_tpot = d.get("median_tpot_ms", 0.0)
+            p99_tpot = d.get("p99_tpot_ms", 0.0)
+            mean_lat = d.get("mean_e2el_ms", 0.0) / 1000.0
+            med_lat = d.get("median_e2el_ms", 0.0) / 1000.0
+            p99_lat = d.get("p99_e2el_ms", 0.0) / 1000.0
+            report_lines.append(
+                f"| **{c}** | {prompts} | {out_tps:.2f} | {tot_tps:.2f} | {mean_ttft:.2f} | {med_ttft:.2f} | {p99_ttft:.2f} | {mean_tpot:.2f} | {med_tpot:.2f} | {p99_tpot:.2f} | {mean_lat:.2f} | {med_lat:.2f} | {p99_lat:.2f} |"
+            )
+
+        with open("/results/vllm_10k_500/vllm_benchmark_10k_500_report.md", "w") as f:
+            f.write("\n".join(report_lines) + "\n")
+        print("\n".join(report_lines))
+        EOF
+
+        echo "ALL_VLLM_BENCHMARKS_COMPLETED_SUCCESSFULLY"
+        sleep 36000

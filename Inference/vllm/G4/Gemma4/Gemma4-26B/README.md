@@ -7,6 +7,8 @@ This directory contains deployment manifests, benchmark execution scripts, and c
 - [`results/sglang_benchmark_10k_500_report.md`](./results/sglang_benchmark_10k_500_report.md): **10K Input / 500 Output Concurrency Sweep Report (C=1 to 512)** on GKE `g4-standard-48` (`pm-g4-sglang-cluster`), matching upstream structure.
 - [`vllm_gemma4_26b_g4_1GPU.yaml`](./vllm_gemma4_26b_g4_1GPU.yaml): GKE StatefulSet + Service manifest for serving `google/gemma-4-26B-A4B` with vLLM on `g4-standard-48` (TP=1, FP8).
 - [`sglang-gemma4-10k-500-benchmark-sweep.yaml`](./sglang-gemma4-10k-500-benchmark-sweep.yaml): Automated GKE benchmark runner pod executing `sglang.bench_serving` across concurrencies 1, 8, 16, 32, 64, 128, 256, 512.
+- [`vllm-gemma4-10k-500-benchmark-sweep.yaml`](./vllm-gemma4-10k-500-benchmark-sweep.yaml): Automated GKE benchmark runner pod executing native `vllm bench serve` across concurrencies 1, 8, 16, 32, 64, 128, 256, 512.
+- [`run_vllm_benchmark_10k_500.sh`](./run_vllm_benchmark_10k_500.sh): Standalone shell script to run native `vllm bench serve` against a vLLM server (or inside Docker) for the 10K Input / 500 Output concurrency sweep (C=1 to 512).
 - [`results/gemma4_26b_g4_benchmark_sweep_report.md`](./results/gemma4_26b_g4_benchmark_sweep_report.md): **New Structured Extended Benchmark Report** (Peak throughput summary, sweet-spot SLA analysis, and full concurrency sweep breakdown).
 - [`vllm-gemma4-26b.yaml`](./vllm-gemma4-26b.yaml): Kubernetes Deployment spec with full optimization parameters (FP8 KV Cache, QWIX FP8 Quantization, async scheduling).
 - [`run_benchmarks.sh`](./run_benchmarks.sh): Standalone automation script to execute the 20-run benchmark matrix (4 ISL/OSL workloads × 5 concurrency levels).
