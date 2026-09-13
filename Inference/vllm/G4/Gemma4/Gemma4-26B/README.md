@@ -4,7 +4,7 @@ This directory contains deployment manifests, benchmark execution scripts, and c
 
 ## Files Included
 
-- [`sglang_benchmark_10k_500_report.md`](./sglang_benchmark_10k_500_report.md): **10K Input / 500 Output Concurrency Sweep Report (C=1 to 512)** on GKE `g4-standard-48` (`pm-g4-sglang-cluster`), matching upstream structure.
+- [`results/sglang_benchmark_10k_500_report.md`](./results/sglang_benchmark_10k_500_report.md): **10K Input / 500 Output Concurrency Sweep Report (C=1 to 512)** on GKE `g4-standard-48` (`pm-g4-sglang-cluster`), matching upstream structure.
 - [`vllm_gemma4_26b_g4_1GPU.yaml`](./vllm_gemma4_26b_g4_1GPU.yaml): GKE StatefulSet + Service manifest for serving `google/gemma-4-26B-A4B` with vLLM on `g4-standard-48` (TP=1, FP8).
 - [`sglang-gemma4-10k-500-benchmark-sweep.yaml`](./sglang-gemma4-10k-500-benchmark-sweep.yaml): Automated GKE benchmark runner pod executing `sglang.bench_serving` across concurrencies 1, 8, 16, 32, 64, 128, 256, 512.
 - [`results/gemma4_26b_g4_benchmark_sweep_report.md`](./results/gemma4_26b_g4_benchmark_sweep_report.md): **New Structured Extended Benchmark Report** (Peak throughput summary, sweet-spot SLA analysis, and full concurrency sweep breakdown).
@@ -13,7 +13,7 @@ This directory contains deployment manifests, benchmark execution scripts, and c
 - [`benchmark_report_concurrency_matrix.md`](./benchmark_report_concurrency_matrix.md): Max-concurrency benchmark report (`--request-rate inf --max-concurrency $C`, Aug 8, 2026).
 - [`benchmark_report.md`](./benchmark_report.md): Fixed-rate benchmark report (`--request-rate $C`, Aug 7, 2026).
 - **Raw Benchmark Results**:
-  - [`results/10k_500/`](./results/10k_500/): Raw JSON metrics (`result_10k_500_c1.json` through `result_10k_500_c512.json`) and report for 10K Input / 500 Output sweep.
+  - [`results/sglang_benchmark_10k_500_report.md`](./results/sglang_benchmark_10k_500_report.md) & `results/result_10k_500_c*.json`: Report and raw JSON metrics (`result_10k_500_c1.json` through `result_10k_500_c512.json`) for 10K Input / 500 Output sweep.
   - [`results/gemma4_26b_manual_results_20260808_071935.txt`](./results/gemma4_26b_manual_results_20260808_071935.txt): Full 20-run raw console output for max-concurrency mode.
   - [`results/gemma4_26b_manual_results.txt`](./results/gemma4_26b_manual_results.txt): Full 20-run raw console output for fixed-rate mode.
 
