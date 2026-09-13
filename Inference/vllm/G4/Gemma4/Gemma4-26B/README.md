@@ -13,7 +13,7 @@ This directory contains deployment manifests, benchmark execution scripts, and c
 - [`benchmark_report_concurrency_matrix.md`](./benchmark_report_concurrency_matrix.md): Max-concurrency benchmark report (`--request-rate inf --max-concurrency $C`, Aug 8, 2026).
 - [`benchmark_report.md`](./benchmark_report.md): Fixed-rate benchmark report (`--request-rate $C`, Aug 7, 2026).
 - **Raw Benchmark Results**:
-  - [`results/sglang_benchmark_10k_500_report.md`](./results/sglang_benchmark_10k_500_report.md) & `results/result_10k_500_c*.json`: Report and raw JSON metrics (`result_10k_500_c1.json` through `result_10k_500_c512.json`) for 10K Input / 500 Output sweep.
+  - [`results/sglang_benchmark_10k_500_report.md`](./results/sglang_benchmark_10k_500_report.md): Report for 10K Input / 500 Output sweep.
   - [`results/gemma4_26b_manual_results_20260808_071935.txt`](./results/gemma4_26b_manual_results_20260808_071935.txt): Full 20-run raw console output for max-concurrency mode.
   - [`results/gemma4_26b_manual_results.txt`](./results/gemma4_26b_manual_results.txt): Full 20-run raw console output for fixed-rate mode.
 
