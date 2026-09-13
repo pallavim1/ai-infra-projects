@@ -42,7 +42,7 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
-        cloud.google.com/gke-accelerator: nvidia-rtx-pro-6000
+        cloud.google.com/gke-nodepool: g4-48-pool-v2
       tolerations:
       - key: "nvidia.com/gpu"
         operator: "Exists"
