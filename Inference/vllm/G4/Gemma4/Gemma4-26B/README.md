@@ -4,6 +4,7 @@ This directory contains deployment manifests, benchmark execution scripts, and c
 
 ## Files Included
 
+- **[Google Slides Presentation Deck](https://docs.google.com/presentation/d/1VmMbPQSLC-9ZBAqypqno8g6GYZ43arnNkPHWXOdfLzk/edit)**: 7-slide executive deck covering Gemma 4 26B MoE 10K/500 serving benchmarks & `vllm bench serve` vs. `sglang.bench_serving` methodology analysis ([PDF](./results/Gemma4_26B_G4_10K_500_Benchmark_Deck.pdf) | [PPTX](./results/Gemma4_26B_G4_10K_500_Benchmark_Deck.pptx)).
 - [`results/vllm_vs_sglang_client_comparison.md`](./results/vllm_vs_sglang_client_comparison.md): **Side-by-side comparison of `vllm bench serve` vs. `sglang.bench_serving`** on the same vLLM G4 server (`1x g4-standard-48`).
 - [`results/vllm_benchmark_10k_500_report.md`](./results/vllm_benchmark_10k_500_report.md): **10K Input / 500 Output Native vLLM Concurrency Sweep Report (C=1 to 512)** using `vllm bench serve` on GKE `g4-standard-48` (`pm-g4-sglang-cluster`).
 - [`results/sglang_benchmark_10k_500_report.md`](./results/sglang_benchmark_10k_500_report.md): **10K Input / 500 Output Concurrency Sweep Report (C=1 to 512)** using `sglang.bench_serving` on GKE `g4-standard-48` (`pm-g4-sglang-cluster`).
