@@ -1,0 +1,92 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sglang-gemma4-h100-2gpu-10k-500-benchmark-runner
+  namespace: default
+  labels:
+    app: sglang-gemma4-h100-2gpu-benchmark
+spec:
+  restartPolicy: Never
+  nodeSelector:
+    cloud.google.com/gke-nodepool: benchmark-client-pool-tcpx
+  containers:
+    - name: benchmark-runner
+      image: lmsysorg/sglang:v0.5.10.post1
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          set -e
+          mkdir -p /results/h100_2gpu_10k_500
+          echo "=== Waiting for vllm-gemma4-h100-service:8000 to be ready ==="
+          until curl -s http://vllm-gemma4-h100-service:8000/v1/models | grep -q "gemma-4-26B-A4B"; do
+            echo "Waiting for vLLM server (google/gemma-4-26B-A4B on 2x H100 GPUs)..."
+            sleep 10
+          done
+          echo "=== Server is READY! Running warmup request ==="
+          python3 -m sglang.bench_serving \
+            --backend vllm \
+            --host vllm-gemma4-h100-service \
+            --port 8000 \
+            --model google/gemma-4-26B-A4B \
+            --dataset-name random \
+            --random-input-len 1024 \
+            --random-output-len 64 \
+            --random-range-ratio 1.0 \
+            --num-prompts 4 \
+            --max-concurrency 2 \
+            --request-rate inf
+
+          echo "=== Starting 10K Input / 500 Output Concurrency Sweep (C=1, 8, 16, 32, 64, 128, 256, 512) ==="
+          for C in 1 8 16 32 64 128 256 512; do
+            NUM_PROMPTS=$(( C * 2 ))
+            if [ $NUM_PROMPTS -lt 8 ]; then
+              NUM_PROMPTS=8
+            fi
+            OUT_JSON="/results/h100_2gpu_10k_500/result_c${C}.json"
+            echo "--------------------------------------------------------------------------------"
+            echo "Running Concurrency ${C} (Prompts: ${NUM_PROMPTS}, ISL=10240, OSL=500)..."
+            echo "--------------------------------------------------------------------------------"
+            python3 -m sglang.bench_serving \
+              --backend vllm \
+              --host vllm-gemma4-h100-service \
+              --port 8000 \
+              --model google/gemma-4-26B-A4B \
+              --dataset-name random \
+              --random-input-len 10240 \
+              --random-output-len 500 \
+              --random-range-ratio 1.0 \
+              --num-prompts ${NUM_PROMPTS} \
+              --max-concurrency ${C} \
+              --request-rate inf \
+              --output-file "${OUT_JSON}"
+          done
+
+          echo "=== Sweep Complete! Generating Markdown Summary Report ==="
+          python3 -c '
+          import json
+          concurrencies = [1, 8, 16, 32, 64, 128, 256, 512]
+          print("# SGLang Benchmark Report: `google/gemma-4-26B-A4B` on 2x H100 GPUs (10K Input / 500 Output)\n")
+          print("| Concurrency | Completed Req | Output Tok/s | Input Tok/s | Total Tok/s | Req/s | Median TTFT (ms) | P99 TTFT (ms) | Median TPOT (ms) | P99 TPOT (ms) | Median ITL (ms) | Median Latency (s) | P99 Latency (s) |")
+          print("| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |")
+          for c in concurrencies:
+              fn = f"/results/h100_2gpu_10k_500/result_c{c}.json"
+              with open(fn) as f:
+                  d = json.load(f)
+              print(f"| **{c}** | {d[\"completed\"]} | **{d[\"output_throughput\"]:.2f}** | {d[\"input_throughput\"]:,.2f} | {d[\"total_throughput\"]:,.2f} | {d[\"request_throughput\"]:.2f} | **{d[\"median_ttft_ms\"]:.2f}** | {d[\"p99_ttft_ms\"]:,.2f} | **{d[\"median_tpot_ms\"]:.2f}** | {d[\"p99_tpot_ms\"]:.2f} | **{d[\"median_itl_ms\"]:.2f}** | **{d[\"median_e2e_latency_ms\"]/1000:.2f}** | **{d[\"p99_e2e_latency_ms\"]/1000:.2f}** |")
+          ' | tee /results/h100_2gpu_10k_500/sglang_benchmark_h100_2gpu_10k_500_report.md
+
+          echo "=== Sleeping to allow log/file collection ==="
+          sleep 86400
+      env:
+        - name: HF_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: hf-secret
+              key: HF_TOKEN
+      resources:
+        requests:
+          cpu: "4"
+          memory: "16Gi"
+        limits:
+          cpu: "8"
+          memory: "32Gi"
