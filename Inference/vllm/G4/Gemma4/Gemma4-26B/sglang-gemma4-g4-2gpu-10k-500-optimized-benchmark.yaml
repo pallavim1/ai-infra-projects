@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sglang-gemma4-g4-2gpu-optimized-benchmark-runner
+  namespace: default
+spec:
+  restartPolicy: Never
+  nodeSelector:
+    cloud.google.com/gke-nodepool: benchmark-client-pool
+  volumes:
+  - name: results-dir
+    emptyDir: {}
+  containers:
+  - name: benchmark-runner
+    image: lmsysorg/sglang:v0.5.10.post1
+    imagePullPolicy: IfNotPresent
+    command: ["/bin/bash", "-c"]
+    args:
+    - |
+      set -e
+      mkdir -p /results/g4_2gpu_optimized
+
+      echo "Waiting for optimized vLLM server (google/gemma-4-26B-A4B on 2x G4 GPUs)..."
+      until curl -s http://vllm-gemma4-2gpu-service:8000/v1/models | grep -q "gemma-4-26B-A4B"; do
+        sleep 10
+        echo "Waiting for optimized 2x G4 vLLM server..."
+      done
+      echo "=== Server is READY! Running warmup request ==="
+      python3 -m sglang.bench_serving \
+        --backend vllm \
+        --host vllm-gemma4-2gpu-service \
+        --port 8000 \
+        --model google/gemma-4-26B-A4B \
+        --dataset-name random \
+        --random-input-len 10000 \
+        --random-output-len 64 \
+        --random-range-ratio 1.0 \
+        --num-prompts 4 \
+        --max-concurrency 2
+
+      echo "=== 1. Running Customer Effective Load: 75 QPM (1.25 req/s), 10000 Input / 500 Output, Batch Size <= 32 ==="
+      python3 -m sglang.bench_serving \
+        --backend vllm \
+        --host vllm-gemma4-2gpu-service \
+        --port 8000 \
+        --model google/gemma-4-26B-A4B \
+        --dataset-name random \
+        --random-input-len 10000 \
+        --random-output-len 500 \
+        --random-range-ratio 1.0 \
+        --request-rate 1.25 \
+        --max-concurrency 32 \
+        --num-prompts 32 \
+        --output-file /results/g4_2gpu_optimized/result_qpm75.json
+
+      echo "=== 2. Running Customer Peak Load: 250 QPM (4.17 req/s), 10000 Input / 500 Output, Batch Size = 32 ==="
+      python3 -m sglang.bench_serving \
+        --backend vllm \
+        --host vllm-gemma4-2gpu-service \
+        --port 8000 \
+        --model google/gemma-4-26B-A4B \
+        --dataset-name random \
+        --random-input-len 10000 \
+        --random-output-len 500 \
+        --random-range-ratio 1.0 \
+        --request-rate 4.17 \
+        --max-concurrency 32 \
+        --num-prompts 64 \
+        --output-file /results/g4_2gpu_optimized/result_qpm250.json
+
+      echo "=== 3. Running Concurrency Sweep (C=1, 8, 10, 16, 32) for 10000 Input / 500 Output ==="
+      for c in 1 8 10 16 32; do
+        prompts=$((c * 2))
+        if [ $prompts -lt 8 ]; then prompts=8; fi
+        echo "--------------------------------------------------------------------------------"
+        echo "Running Concurrency ${c} (Prompts: ${prompts}, ISL=10000, OSL=500)..."
+        echo "--------------------------------------------------------------------------------"
+        python3 -m sglang.bench_serving \
+          --backend vllm \
+          --host vllm-gemma4-2gpu-service \
+          --port 8000 \
+          --model google/gemma-4-26B-A4B \
+          --dataset-name random \
+          --random-input-len 10000 \
+          --random-output-len 500 \
+          --random-range-ratio 1.0 \
+          --max-concurrency ${c} \
+          --num-prompts ${prompts} \
+          --output-file /results/g4_2gpu_optimized/result_c${c}.json
+      done
+
+      echo "=== 2x G4 Optimization Sweep Complete! Sleeping for file collection ==="
+      sleep 3600
+    env:
+    - name: HF_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: hf-secret
+          key: hf_token
+          optional: true
+    volumeMounts:
+    - name: results-dir
+      mountPath: /results
