@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: vllm-gemma4-1node-2gpu
+  namespace: default
+spec:
+  replicas: 1
+  serviceName: vllm-gemma4-h100-service
+  selector:
+    matchLabels:
+      app: vllm-gemma4-h100
+  template:
+    metadata:
+      labels:
+        app: vllm-gemma4-h100
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: pallaviam-h100-tcpx-pool
+        kubernetes.io/hostname: gke-pallaviam-gke-h1-pallaviam-h100-t-a09230c3-w3nb
+      tolerations:
+      - key: "nvidia.com/gpu"
+        operator: "Exists"
+        effect: "NoSchedule"
+      volumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 64Gi
+      - name: hf-cache
+        hostPath:
+          path: /mnt/stateful_partition/kube-ephemeral-ssd/hf-cache
+          type: DirectoryOrCreate
+      containers:
+      - name: vllm-server
+        image: vllm/vllm-openai:nightly
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          # Isolate host TCPXO NCCL net/tuner plugins so standalone 2-GPU pod uses direct NVLink P2P
+          mkdir -p /tmp/nvidia-libs
+          cp -a /usr/local/nvidia/lib64/* /tmp/nvidia-libs/ || true
+          rm -f /tmp/nvidia-libs/libnccl-net.so* /tmp/nvidia-libs/libnccl-tuner.so*
+          export LD_LIBRARY_PATH="/tmp/nvidia-libs:/usr/local/cuda/lib64"
+          export NCCL_NET="Socket"
+          export NCCL_NET_PLUGIN="none"
+          export NCCL_TUNER_PLUGIN="none"
+          export NCCL_P2P_LEVEL="NVL"
+          export CUDA_DEVICE_MAX_CONNECTIONS="1"
+          export VLLM_USE_V1="1"
+
+          exec vllm serve google/gemma-4-26B-A4B \
+            --host 0.0.0.0 \
+            --port 8000 \
+            --tensor-parallel-size 2 \
+            --enable-expert-parallel \
+            --language-model-only \
+            --quantization fp8 \
+            --kv-cache-dtype fp8_e4m3 \
+            --gpu-memory-utilization 0.92 \
+            --max-model-len 16384 \
+            --max-num-seqs 32 \
+            --max-num-batched-tokens 32768 \
+            --no-enable-prefix-caching \
+            --enable-chunked-prefill \
+            --attention-config '{"backend": "TRITON_ATTN"}' \
+            --compilation-config '{"mode": 3, "cudagraph_mode": "FULL_AND_PIECEWISE", "cudagraph_capture_sizes": [1, 2, 4, 8, 12, 16, 24, 32]}' \
+            --trust-remote-code \
+            --served-model-name google/gemma-4-26B-A4B
+        env:
+        - name: HF_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: hf-secret
+              key: hf_token
+              optional: true
+        - name: HF_HOME
+          value: "/root/.cache/huggingface"
+        ports:
+        - containerPort: 8000
+          name: http
+        resources:
+          requests:
+            nvidia.com/gpu: "2"
+          limits:
+            nvidia.com/gpu: "2"
+        volumeMounts:
+        - name: dshm
+          mountPath: /dev/shm
+        - name: hf-cache
+          mountPath: /root/.cache/huggingface
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm-gemma4-h100-service
+  namespace: default
+spec:
+  selector:
+    app: vllm-gemma4-h100
+  ports:
+  - port: 8000
+    targetPort: 8000
+    name: http
+  type: ClusterIP
