@@ -22,7 +22,9 @@ This repository (`panw-tpu-inference` branch of `pallavim1/tpu-inference`) conta
 ## 2. Performance & TCO Comparison Reports (`TPU v6e`, `TPU v5e`, and `NVIDIA L4`)
 
 ### **Cloud TPU v6e (`ct6e-standard-1t`) Reports & Megakernel Design**
-* **[`Approaching Megakernels on TPU v6e` (`megakernel/README.md` & `Approaching_Megakernels_on_TPU_v6e.md`)](https://github.com/pallavim1/tpu-inference/blob/panw-tpu-inference/models/JinaEmbedding/vLLM/Approaching_Megakernels_on_TPU_v6e.md)** *(Also at [`models/JinaEmbedding/vLLM/megakernel/`](https://github.com/pallavim1/tpu-inference/tree/panw-tpu-inference/models/JinaEmbedding/vLLM/megakernel))*
+* **[`models/JinaEmbedding/vLLM/megakernel/` — Approaching Megakernels on TPU v6e & `FP32` `<= 2K` Benchmark Results](https://github.com/pallavim1/tpu-inference/tree/panw-tpu-inference/models/JinaEmbedding/vLLM/megakernel)**:
+  * **[`megakernel/README.md` (Architecture & Asset Index)](https://github.com/pallavim1/tpu-inference/blob/panw-tpu-inference/models/JinaEmbedding/vLLM/megakernel/README.md)**
+  * **[`megakernel/TPU_v6e_FP32_Megakernel_2K_Benchmark_Report.md` (`FP32` `<= 2K` Benchmark & TCO Report)](https://github.com/pallavim1/tpu-inference/blob/panw-tpu-inference/models/JinaEmbedding/vLLM/megakernel/TPU_v6e_FP32_Megakernel_2K_Benchmark_Report.md)**
 * **[`06A` — TPU v6e (`FP32`) vs NVIDIA L4 & TPU v5e (`Performance & TCO Comparison`)](https://github.com/pallavim1/tpu-inference/blob/panw-tpu-inference/models/JinaEmbedding/vLLM/benchmarks/reports/06A_tpu_v6e_fp32_vs_l4_and_v5e_performance_comparison.md)**
 * **[`06B` — TPU v6e (`BF16`) vs NVIDIA L4 & TPU v5e (`Performance & TCO Comparison`)](https://github.com/pallavim1/tpu-inference/blob/panw-tpu-inference/models/JinaEmbedding/vLLM/benchmarks/reports/06B_tpu_v6e_bf16_vs_l4_and_v5e_performance_comparison.md)**
 

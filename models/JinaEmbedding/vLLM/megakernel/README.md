@@ -7,6 +7,35 @@
 
 ---
 
+## Part 0: Megakernel Directory Assets & Measured `FP32` Benchmark Summary (`<= 2K` Token Scope: `1KB` & `2KB` + Maximized RPS)
+
+All Megakernel code, deployment configurations, benchmark scripts, raw JSON results, and performance/TCO reports are consolidated strictly inside this `models/JinaEmbedding/vLLM/megakernel/` directory:
+
+| File in `models/JinaEmbedding/vLLM/megakernel/` | Description |
+| :--- | :--- |
+| **[`TPU_v6e_FP32_Megakernel_2K_Benchmark_Report.md`](TPU_v6e_FP32_Megakernel_2K_Benchmark_Report.md)** | **Complete `FP32` Performance & TCO Report (`<= 2K` Token Scope: `1KB` & `2KB` Only + Maximized RPS up to `400 RPS`)** comparing TPU v6e `FP32` Megakernel vs. TPU v6e `FP32` Baseline, TPU v5e `FP32` Baseline, and NVIDIA L4 GPU (`FP16`). |
+| **[`jina_v6e_megakernel.py`](jina_v6e_megakernel.py)** | **4-Layer Fused `FP32` Megakernel (`jina_v6e_4layer_megakernel`)**: Single `jax.jit(jax.shard_map(...))` + `jax.lax.scan` across all 4 encoder layers, fused head-first `W_qkv` (`[4, 512, 3, 8, 64]`), single `SegmentIds` build, zero `swapaxes`/`jnp.pad` copies, and TPU v6e 32 MB VMEM single-step Pallas ALiBi FlashAttention (`block_q=512, block_k=padded_len`). |
+| **[`jina_bert.py`](jina_bert.py)** | Megakernel-enabled `JinaBertForMaskedLM` & `JinaBertEncoder` model implementation for `tpu_inference`. |
+| **[`megakernel_proxy.py`](megakernel_proxy.py)** | **Fast-Path Zero-Copy & Adaptive Pipelined Micro-Batch Coalescer (`AdaptiveMicroBatcher`)** eliminating double JSON serialization and coalescing concurrent online requests into contiguous multi-prompt TPU batches. |
+| **[`tpu_v6e_fp32_megakernel_deployment.yaml`](tpu_v6e_fp32_megakernel_deployment.yaml)** | Kubernetes ConfigMap & Deployment manifest for running the TPU v6e `FP32` Megakernel on GKE (`ct6e-standard-1t`). |
+| **[`run_v6e_fp32_megakernel_2k_suite.py`](run_v6e_fp32_megakernel_2k_suite.py)** | Automated `FP32` benchmark runner strictly scoped to `<= 2K` token length (`1KB` & `2KB` payloads, Batch `1..128`, `k6` Concurrency `1..16`, and `k6` Maximized RPS Saturation Sweeps up to `400 RPS`). |
+| **[`v6e_fp32_megakernel_2k_results.json`](v6e_fp32_megakernel_2k_results.json)** | Complete raw JSON telemetry from the GKE TPU v6e `FP32` Megakernel benchmark run. |
+
+### Key Measured `FP32` Megakernel Results (`1KB` & `2KB` Only, `<= 2K` Token Length)
+
+| Metric (`FP32` Precision, `<= 2K` Scope) | NVIDIA L4 GPU (`FP16`) | TPU v6e `FP32` Baseline | **TPU v6e `FP32` Megakernel** | **Megakernel Gain vs. v6e Baseline** | **Megakernel Gain vs. L4 GPU** |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **`1KB` Online Maximized Saturation RPS (`0` Dropped)** | `155.0 RPS` | `218.2 RPS` | **`395.6 RPS`** (`@ 400 RPS`) | **`1.81x` (`+81.3%`)** | **`2.55x` (`+155.2%`)** |
+| **`2KB` Online Maximized Saturation RPS (`0` Dropped)** | `80.0 RPS` | `114.6 RPS` | **`197.6 RPS`** (`@ 200 RPS`) | **`1.72x` (`+72.4%`)** | **`2.47x` (`+147.0%`)** |
+| **`2KB` Online `p99` Latency @ `140 RPS`** | *Saturated (`> 80 RPS`)* | `2,812.6 ms` | **`14.0 ms`** (`p50 = 12.0 ms`) | **`200.9x` Lower `p99`** | **L4 Cannot Reach `140 RPS`** |
+| **`1KB` Online `k6` Concurrency = 1 (`RPS` / `p50`)** | `78.5 RPS` (`12.7 ms`) | `95.5 RPS` (`10.2 ms`) | **`101.8 RPS` (`9.5 ms`)** | **`+6.6%` RPS (`-0.7 ms` `p50`)** | **`1.30x` RPS (`-3.2 ms` `p50`)** |
+| **`2KB` Online `k6` Concurrency = 16 (`RPS` / `p50`)** | `81.7 RPS` (`195.4 ms`) | `116.5 RPS` (`135.7 ms`) | **`172.3 RPS` (`92.0 ms`)** | **`1.48x` (`+47.9%` RPS)** | **`2.11x` (`+110.9%` RPS)** |
+| **`1KB` Multi-Prompt Batch = 16 (`Prompts/s` / `p50`)** | `156.2 /s` (`102.3 ms`) | `270.4 /s` (`59.1 ms`) | **`275.4 /s` (`58.8 ms`)** | **`+1.8%` RPS** | **`1.76x` (`+76.3%` RPS)** |
+| **`2KB` Multi-Prompt Batch = 16 (`Prompts/s` / `p50`)** | `81.7 /s` (`195.4 ms`) | `148.1 /s` (`107.8 ms`) | **`159.6 /s` (`99.7 ms`)** | **`+7.8%` RPS** | **`1.95x` (`+95.3%` RPS)** |
+| **`2,048`-Token High-Batch `B=128` Peak Throughput** | *N/A* | `236,769 tok/s` | **`246,518 tok/s`** (`120.4 seq/s`) | **`+4.1%` (`+9,749 tok/s`)** | **`5.90x` L4 Peak Tok/s** |
+
+---
+
 ## Part 1: Can We Use the TPU Megakernel Concept on TPU v6e for Jina Embeddings?
 
 **Yes — not only can we apply the Inferact Pallas TPU Megakernel concept ([700 TPS on Kimi K3: A Case for TPU Megakernels](https://inferact.ai/blog/tpu-megakernels)) to `jina-embeddings-v2-small-en` on TPU v6e (`Trillium`), `jina-embeddings-v2-small-en` is structurally an even better fit for a TPU v6e megakernel than a giant MoE model.**
