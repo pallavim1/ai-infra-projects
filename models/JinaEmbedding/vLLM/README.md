@@ -1,49 +1,34 @@
-# Jina Embeddings v2 on Google Cloud TPU v5e (vLLM)
+# Jina Embeddings v2 on Google Cloud TPU v6e & TPU v5e (vLLM)
 ## Production Benchmarks, Economic Analysis & Deployment Guide
 
-This directory contains the deployment configurations, load testing harnesses, live benchmark results, and Performance-per-Dollar economic models for serving `jinaai/jina-embeddings-v2-small-en` on **Google Cloud TPU v5e** using **vLLM**.
+This directory contains the deployment configurations, load testing harnesses, live benchmark results (`Online k6` + `Batch`), and Performance-per-Dollar / TCO economic models for serving `jinaai/jina-embeddings-v2-small-en` on **Google Cloud TPU v6e (`ct6e-standard-1t`)** and **Google Cloud TPU v5e (`ct5lp-hightpu-1t`)** using **vLLM (`0.26.0`)** vs **NVIDIA L4 (`g2-standard-4`, Triton + TensorRT)**.
 
 ---
 
-## 1. Directory Overview
+## 1. Latest Reports & Consolidated Excel Workbooks
 
-```
-models/JinaEmbedding/vLLM/
-├── deploy/
-│   ├── jina_v5e_deployment.yaml    # Kubernetes Deployment & Service with vLLM + high-performance proxy
-│   └── cluster_setup.sh            # GKE cluster & TPU/CPU nodepool creation script
-├── benchmarks/
-│   ├── k6_ray_serve_test.js        # Original PANW k6 test suite
-│   ├── k6_high_rps_saturation_test.js # Multi-payload saturation load script (1K, 2K, 5K, 7K)
-│   ├── k6_1kb_saturation_test.js   # 1 KB dedicated saturation script (100–220 RPS)
-│   ├── k6_2kb_saturation_test.js   # 2 KB dedicated saturation script (90–110 RPS)
-│   ├── run_cpu_to_tpu_saturation_fp16.py # Automated test runner for FP16 precision
-│   ├── analyze_k6_results.py       # Latency percentile & telemetry parser
-│   └── generate_consolidated_excel.py # Multi-tab Excel workbook builder
-├── reports/
-│   ├── cpu_to_tpu_saturation_fp16_report.md  # FP16 live benchmark report across GKE network
-│   ├── cpu_to_tpu_saturation_report.md       # FP32 live benchmark report across GKE network
-│   ├── tpu_v5e_vs_l4_perf_per_dollar_analysis.md      # FP32 Performance/$ and TCO business case
-│   ├── tpu_v5e_vs_l4_perf_per_dollar_analysis_fp16.md # FP16 Performance/$ and TCO business case
-│   └── jina_embeddings_v2_tpu_v5e_benchmarks.xlsx     # Consolidated multi-tab Excel workbook
-└── results/
-    ├── fp32/                       # Raw summary JSONs and Excel sheets for FP32 live runs
-    └── fp16/                       # Raw summary JSONs and Excel sheets for FP16 live runs
-```
+- **TPU v6e (`FP32`) vs NVIDIA L4 & TPU v5e (`Performance & TCO`)**: [`benchmarks/reports/06A_tpu_v6e_fp32_vs_l4_and_v5e_performance_comparison.md`](benchmarks/reports/06A_tpu_v6e_fp32_vs_l4_and_v5e_performance_comparison.md)
+- **TPU v6e (`BF16`) vs NVIDIA L4 & TPU v5e (`Performance & TCO`)**: [`benchmarks/reports/06B_tpu_v6e_bf16_vs_l4_and_v5e_performance_comparison.md`](benchmarks/reports/06B_tpu_v6e_bf16_vs_l4_and_v5e_performance_comparison.md)
+- **TPU v5e (`FP32`) vs NVIDIA L4 (`Performance & TCO`)**: [`benchmarks/reports/05A_tpu_v5e_fp32_vs_l4_performance_comparison.md`](benchmarks/reports/05A_tpu_v5e_fp32_vs_l4_performance_comparison.md)
+- **TPU v5e (`BF16`) vs NVIDIA L4 (`Performance & TCO`)**: [`benchmarks/reports/05B_tpu_v5e_bf16_vs_l4_performance_comparison.md`](benchmarks/reports/05B_tpu_v5e_bf16_vs_l4_performance_comparison.md)
+- **Consolidated 8-Tab Excel Workbook (`TPU v6e + TPU v5e + NVIDIA L4`)**: [`benchmarks/reports/ATP_AIC2_Benchmarks_TPU_v6e_v5e_FP32_and_BF16_vs_L4.xlsx`](benchmarks/reports/ATP_AIC2_Benchmarks_TPU_v6e_v5e_FP32_and_BF16_vs_L4.xlsx)
+- **Raw TPU v6e JSON Results**:
+  - [`benchmarks/results/v6e_float32_complete_results_20260924_184725.json`](benchmarks/results/v6e_float32_complete_results_20260924_184725.json)
+  - [`benchmarks/results/v6e_bfloat16_complete_results_20260924_175613.json`](benchmarks/results/v6e_bfloat16_complete_results_20260924_175613.json)
 
 ---
 
-## 2. Key Benchmark Findings vs. NVIDIA L4 ($P_{99} < 50\text{ ms}$ SLA)
+## 2. Key Benchmark Findings: TPU v6e vs TPU v5e vs NVIDIA L4 ($P_{99} \le 50\text{ ms}$ SLA)
 
-All tests were conducted from a dedicated **CPU Node Pool (`cpu-benchmark-pool`, `n2-standard-8`)** targeting the TPU v5e service over the real **GKE internal cluster network** with sustained 60-second stages:
+All tests were conducted from a dedicated **CPU Node Pool (`cpu-benchmark-pool`, `n2-standard-8`)** on `pm-panw-jina-cluster` targeting the TPU v6e (`pm-panw-jina-v6e-pool`, `ct6e-standard-1t`) and TPU v5e (`pm-panw-jina-tpu-pool`, `ct5lp-hightpu-1t`) services over the real **GKE internal cluster network**:
 
-| Payload Size | NVIDIA L4 Max RPS | TPU v5e Max RPS (FP32) | TPU v5e Max RPS (FP16) | TPU Throughput Advantage | TPU Net Cost Savings (3-Yr CUD) |
+| Payload Size | NVIDIA L4 Max RPS | TPU v5e (`FP32` / `BF16`) | **TPU v6e (`FP32` / `BF16`)** | **TPU v6e vs L4 Advantage** | **TPU v6e Cost Reduction vs L4 (1-Yr / 3-Yr CUD)** |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **1 KB** (`1024 B`) | **40 RPS** | **180 RPS** ($P_{99}=38.9\text{ms}$) | **160 RPS** ($P_{99}=28.9\text{ms}$) | **4.0x – 4.5x Higher** | **57.8% – 62.5% Cheaper** |
-| **2 KB** (`2048 B`) | **40 RPS** | **90 RPS** ($P_{99}=28.4\text{ms}$) | **80 RPS** ($P_{99}=24.8\text{ms}$) | **2.0x – 2.25x Higher** | **15.6% – 25.0% Cheaper** |
-| **5 KB** (`5120 B`) | **20 RPS** | **90 RPS** ($P_{99}=44.9\text{ms}$) | **80 RPS** ($P_{99}=39.5\text{ms}$) | **4.0x – 4.5x Higher** | **57.8% – 62.5% Cheaper** |
-| **7 KB** (`7168 B`) | **10 RPS** | **80 RPS** ($P_{99}=41.5\text{ms}$) | **80 RPS** ($P_{99}=48.0\text{ms}$) | **8.0x Higher** | **78.9% Cheaper** |
-| **Blended Avg** | **33.0 RPS** | **125.0 RPS** | **112.0 RPS** | **3.4x – 3.8x Higher** | **50.3% – 55.5% Cheaper** |
+| **1 KB** (`1024 B`) | **70 RPS** | 140 / 160 RPS | **160–180 (`FP32`) / 160–200 (`BF16`) RPS** | **2.29x – 2.86x Higher** | **15.0% (`1-Yr`) – 38.9% (`3-Yr`) Cheaper** |
+| **2 KB** (`2048 B`) | **40 RPS** | 70 / 90 RPS | **100 (`FP32`) / 110 (`BF16`) RPS** | **2.50x – 2.75x Higher** | **11.7% (`1-Yr`) – 36.6% (`3-Yr`) Cheaper** |
+| **3 KB** (`3072 B`) | **30 RPS** | 70 / 90 RPS | **110 (`FP32`) / 100 (`BF16`) RPS** | **3.33x – 3.67x Higher** | **27.1% (`1-Yr`) – 52.5% (`3-Yr`) Cheaper** |
+| **5 KB** (`5120 B`) | **20 RPS** | 70 / 90 RPS | **100 (`FP32`) / 110 (`BF16`) RPS** | **5.00x – 5.50x Higher** | **55.9% (`1-Yr`) – 68.3% (`3-Yr`) Cheaper** *(29.9% On-Demand)* |
+| **7 KB** (`7168 B`) | **10 RPS** | 70 / 90 RPS | **100 (`FP32`) / 110 (`BF16`) RPS** | **10.0x – 11.0x Higher** | **77.9% (`1-Yr`) – 84.2% (`3-Yr`) Cheaper** *(64.9% On-Demand)* |
 
 ---
 
