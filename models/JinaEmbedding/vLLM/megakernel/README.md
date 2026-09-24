@@ -13,6 +13,8 @@ All Megakernel code, deployment configurations, benchmark scripts, raw JSON resu
 
 | File in `models/JinaEmbedding/vLLM/megakernel/` | Description |
 | :--- | :--- |
+| **[`ATP_AIC2_Benchmarks_TPU_v6e_FP32_Megakernel_vs_L4_and_Baselines.xlsx`](ATP_AIC2_Benchmarks_TPU_v6e_FP32_Megakernel_vs_L4_and_Baselines.xlsx)** | **10-Tab Consolidated Excel Workbook** matching Zhemin's spreadsheet schema (`TPU V6e FP32 Megakernel vs L4`, `Jina + TPU V6e FP32 Megakernel`, plus all `TPU v6e` & `TPU v5e` `FP32`/`BF16` vs `L4` comparison and raw tabs). |
+| **[`TPU_v6e_FP32_Megakernel_Zhemin_Spreadsheet_Comparison.csv`](TPU_v6e_FP32_Megakernel_Zhemin_Spreadsheet_Comparison.csv)** | **CSV Export of Zhemin's Comparison & 40% Fleet Utilization Cost Sheet** (`P50`, `P99`, `RPS Saturation`, and `Cost / 1M Req` for `TPU v6e FP32 Megakernel` vs `L4 GPU`). |
 | **[`TPU_v6e_FP32_Megakernel_2K_Benchmark_Report.md`](TPU_v6e_FP32_Megakernel_2K_Benchmark_Report.md)** | **Complete `FP32` Performance & TCO Report (`<= 2K` Token Scope: `1KB` & `2KB` Only + Maximized RPS up to `400 RPS`)** comparing TPU v6e `FP32` Megakernel vs. TPU v6e `FP32` Baseline, TPU v5e `FP32` Baseline, and NVIDIA L4 GPU (`FP16`). |
 | **[`jina_v6e_megakernel.py`](jina_v6e_megakernel.py)** | **4-Layer Fused `FP32` Megakernel (`jina_v6e_4layer_megakernel`)**: Single `jax.jit(jax.shard_map(...))` + `jax.lax.scan` across all 4 encoder layers, fused head-first `W_qkv` (`[4, 512, 3, 8, 64]`), single `SegmentIds` build, zero `swapaxes`/`jnp.pad` copies, and TPU v6e 32 MB VMEM single-step Pallas ALiBi FlashAttention (`block_q=512, block_k=padded_len`). |
 | **[`jina_bert.py`](jina_bert.py)** | Megakernel-enabled `JinaBertForMaskedLM` & `JinaBertEncoder` model implementation for `tpu_inference`. |
