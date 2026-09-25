@@ -307,7 +307,7 @@ class JinaBertEncoder(JaxModule):
         ])
         first_self = getattr(self.layer[0].attention, "self")
         self.sm_scale = float(first_self.head_dim_original**-0.5)
-        self.alibi_slopes = first_self.alibi_slopes
+        self.alibi_slopes = tuple(first_self.alibi_slopes)
 
     def __call__(self, x: jax.Array,
                  attention_metadata: AttentionMetadata) -> jax.Array:
@@ -355,7 +355,6 @@ class JinaBertEncoder(JaxModule):
         ln2_bias = jnp.stack(
             [L.mlp.layernorm.bias.value for L in self.layer], axis=0)
 
-        alibi_arr = jnp.asarray(self.alibi_slopes, dtype=jnp.float32)
         return jina_v6e_4layer_megakernel(
             x=x,
             seq_lens=attention_metadata.seq_lens,
@@ -370,9 +369,9 @@ class JinaBertEncoder(JaxModule):
             b_down=b_down,
             ln2_scale=ln2_scale,
             ln2_bias=ln2_bias,
-            alibi_slopes=alibi_arr,
             mesh=self.mesh,
             sm_scale=self.sm_scale,
+            alibi_slopes=self.alibi_slopes,
             layer_norm_eps=self.layer_norm_eps,
         )
 

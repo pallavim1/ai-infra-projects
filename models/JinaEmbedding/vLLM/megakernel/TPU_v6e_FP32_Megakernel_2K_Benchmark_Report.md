@@ -1,14 +1,18 @@
 # Cloud TPU v6e (`FP32` 4-Layer Fused Megakernel) Benchmark & Cost Report — Strictly `max_model_len = 2048` (`jina-v2-embeddings-clean`)
 
 > [!IMPORTANT]
-> **Tested Engine Branch, Strict `max_model_len = 2048` Configuration & On-Demand Pricing**
-> - **Engine Branch Tested**: [`pallavim1/tpu-inference@jina-v2-embeddings-clean`](https://github.com/pallavim1/tpu-inference/tree/jina-v2-embeddings-clean) (`commit a8733e93`)
+> **Tested Engine Branch, Optimizations Applied, Strict `max_model_len = 2048` Config & On-Demand Pricing**
+> - **Engine Branch Tested**: [`pallavim1/tpu-inference@jina-v2-embeddings-clean`](https://github.com/pallavim1/tpu-inference/tree/jina-v2-embeddings-clean) (`commit 8a096d8c`)
 > - **Reports & Docs Branch**: [`pallavim1/tpu-inference@panw-tpu-inference`](https://github.com/pallavim1/tpu-inference/tree/panw-tpu-inference/models/JinaEmbedding/vLLM/megakernel)
 > - **Model & Precision**: `jinaai/jina-embeddings-v2-small-en` (`JinaBertForMaskedLM`, `dtype = float32`)
 > - **Strict `2048` Token Limit**:
 >   1. `JinaBertModel` (`tpu_inference/models/jax/jina_bert.py`) and `jina_v6e_4layer_megakernel` (`tpu_inference/kernels/jina_v6e_megakernel.py`) strictly enforce **`MAX_MODEL_LEN = 2048`** (`T <= 2048`; `4096` and `8192` token buckets are never compiled or executed).
 >   2. `vllm serve` runs with **`--max-model-len 2048 --max-num-batched-tokens 2048 --dtype float32`**.
 >   3. Adapter proxy (`megakernel_proxy.py`) enforces **`"truncate_prompt_tokens": 2048`** on every request.
+> - **Internal Megakernel & Proxy Optimizations Applied (`commit 8a096d8c`)**:
+>   1. **Compile-Time NumPy ALiBi `[1, 8, T, T]` Constant in HBM**: Eliminates runtime `jnp.abs(idx[:, None] - idx[None, :]) * slopes` VPU tensor construction on every forward step (`0.00 ms` runtime VPU ALiBi overhead).
+>   2. **1-Pass `FP32`-Accumulated MXU Projections**: Uses native 1-pass `preferred_element_type=jnp.float32` MXU dot products matching `tpu_inference`'s `JaxEinsum`/`JaxLinear`, cutting projection MXU passes by `3x` across `QKV`, `O`, `GeGLU`, and `WO`.
+>   3. **Semaphore-Before-Drain Pair Coalescing (`1KB`)**: Acquires a pipeline slot before draining up to two `1KB` (`~1,009`-token) requests (`2 * 1,009 = 2,018 <= 2,048` token budget) so `1KB` pairs never fragment across workers.
 > - **On-Demand (OD) Hourly Pricing**:
 >   - **NVIDIA L4**: `\$0.70 / hr` (`\$511.00 / mo` per GPU)
 >   - **Cloud TPU v5e**: `\$1.20 / hr` (`\$876.00 / mo` per chip)
@@ -38,19 +42,20 @@
 
 | RPS | TPU v6e Megakernel Achieved | TPU v6e Megakernel `P50` | TPU v6e Megakernel `P99` | TPU v6e Megakernel SLA (`<50ms`) | TPU v5e Achieved (Zhemin) | TPU v5e `P50` (Zhemin) | TPU v5e `P99` (Zhemin) | TPU v5e SLA (Zhemin) |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **100** | `99.97` | `11.5 ms` | `13.6 ms` | `✅ PASS` | `100` | `11.5 ms` | `14.0 ms` | `✅ PASS` |
-| **120** | `119.96` | `12.2 ms` | `15.0 ms` | `✅ PASS` | `120` | `11.8 ms` | `15.5 ms` | `✅ PASS` |
-| **140** | `139.92` | `13.1 ms` | `15.1 ms` | `✅ PASS` | `140` | `11.6 ms` | `18.5 ms` | `✅ PASS` |
-| **160** | `159.91` | `12.5 ms` | `16.3 ms` | `✅ PASS` | `160` | `16.8 ms` | `24.2 ms` | `✅ PASS` |
-| **180** | `179.89` | `12.7 ms` | `25.5 ms` | `✅ PASS` | `180.1` | `19.9 ms` | `29.6 ms` | `✅ PASS` |
-| **190** | `189.87` | `12.3 ms` | `22.7 ms` | `✅ PASS` | `187.8` | `523.7 ms` | `762.7 ms` | `⚠️ SATURATED` |
-| **200** | `199.84` | `17.9 ms` | `26.6 ms` | `✅ PASS` | `189` | `1709 ms` | `2818 ms` | `⚠️ SATURATED` |
-| **220** | `219.76` | `18.5 ms` | `27.2 ms` | `✅ PASS` | `187.9` | `3738 ms` | `6182 ms` | `⚠️ SATURATED` |
-| **240** | `239.71` | `19.7 ms` | `28.4 ms` | `✅ PASS` | — | — | — | `⚠️ SATURATED` |
-| **260** | `259.69` | `20.7 ms` | `36.2 ms` | `✅ PASS` | — | — | — | `⚠️ SATURATED` |
-| **270** | **`269.73`** | **`19.0 ms`** | **`28.3 ms`** | **`✅ PASS`** | — | — | — | `⚠️ SATURATED` |
-| **280** | `275.68` | `47.6 ms` | `190.1 ms` | `⚠️ SATURATED` | — | — | — | `⚠️ SATURATED` |
-| **290** | `271.16` | `507.9 ms` | `836.9 ms` | `⚠️ SATURATED` | — | — | — | `⚠️ SATURATED` |
+| **100** | `99.99` | `11.1 ms` | `14.5 ms` | `✅ PASS` | `100` | `11.5 ms` | `14.0 ms` | `✅ PASS` |
+| **120** | `119.96` | `12.3 ms` | `15.0 ms` | `✅ PASS` | `120` | `11.8 ms` | `15.5 ms` | `✅ PASS` |
+| **140** | `139.93` | `12.6 ms` | `15.4 ms` | `✅ PASS` | `140` | `11.6 ms` | `18.5 ms` | `✅ PASS` |
+| **160** | `159.92` | `12.0 ms` | `14.1 ms` | `✅ PASS` | `160` | `16.8 ms` | `24.2 ms` | `✅ PASS` |
+| **180** | `179.92` | `11.3 ms` | `19.9 ms` | `✅ PASS` | `180.1` | `19.9 ms` | `29.6 ms` | `✅ PASS` |
+| **190** | `189.90` | `11.3 ms` | `15.3 ms` | `✅ PASS` | `187.8` | `523.7 ms` | `762.7 ms` | `⚠️ SATURATED` |
+| **200** | `199.89` | `11.2 ms` | `19.8 ms` | `✅ PASS` | `189` | `1709 ms` | `2818 ms` | `⚠️ SATURATED` |
+| **220** | `219.73` | `16.8 ms` | `24.0 ms` | `✅ PASS` | `187.9` | `3738 ms` | `6182 ms` | `⚠️ SATURATED` |
+| **240** | `239.74` | `17.6 ms` | `24.4 ms` | `✅ PASS` | — | — | — | `⚠️ SATURATED` |
+| **260** | `259.71` | `18.1 ms` | `24.8 ms` | `✅ PASS` | — | — | — | `⚠️ SATURATED` |
+| **270** | `269.71` | `18.4 ms` | `27.9 ms` | `✅ PASS` | — | — | — | `⚠️ SATURATED` |
+| **280** | **`279.56`** | **`20.3 ms`** | **`36.8 ms`** | **`✅ PASS`** | — | — | — | `⚠️ SATURATED` |
+| **290** | `287.98` | `52.2 ms` | `96.4 ms` | `⚠️ SATURATED` | — | — | — | `⚠️ SATURATED` |
+| **300** | `278.11` | `262.5 ms` | `934.2 ms` | `⚠️ SATURATED` | — | — | — | `⚠️ SATURATED` |
 
 ---
 
@@ -58,16 +63,18 @@
 
 | RPS | TPU v6e Megakernel Achieved | TPU v6e Megakernel `P50` | TPU v6e Megakernel `P99` | TPU v6e Megakernel SLA (`<50ms`) | TPU v5e Achieved (Zhemin) | TPU v5e `P50` (Zhemin) | TPU v5e `P99` (Zhemin) | TPU v5e SLA (Zhemin) |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **90** | `89.96` | `17.0 ms` | `18.9 ms` | `✅ PASS` | `90` | `17.2 ms` | `26.5 ms` | `✅ PASS` |
-| **95** | `94.97` | `16.6 ms` | `18.3 ms` | `✅ PASS` | `94.75` | `218.6 ms` | `346.5 ms` | `⚠️ SATURATED` |
-| **100** | `99.96` | `16.3 ms` | `18.0 ms` | `✅ PASS` | `96.32` | `1031 ms` | `2185 ms` | `⚠️ SATURATED` |
-| **110** | `109.94` | `15.4 ms` | `16.9 ms` | `✅ PASS` | `96.74` | `3208 ms` | `5170 ms` | `⚠️ SATURATED` |
-| **120** | `119.94` | `14.5 ms` | `16.4 ms` | `✅ PASS` | — | — | — | `⚠️ SATURATED` |
-| **130** | `129.92` | `14.1 ms` | `17.9 ms` | `✅ PASS` | — | — | — | `⚠️ SATURATED` |
-| **140** | `139.92` | `14.1 ms` | `30.3 ms` | `✅ PASS` | — | — | — | `⚠️ SATURATED` |
-| **150** | **`149.90`** | **`13.9 ms`** | **`31.1 ms`** | **`✅ PASS`** | — | — | — | `⚠️ SATURATED` |
-| **155** | `151.34` | `122.9 ms` | `292.1 ms` | `⚠️ SATURATED` | — | — | — | `⚠️ SATURATED` |
-| **160** | `149.57` | `456.9 ms` | `836.6 ms` | `⚠️ SATURATED` | — | — | — | `⚠️ SATURATED` |
+| **90** | `89.97` | `12.7 ms` | `17.5 ms` | `✅ PASS` | `90` | `17.2 ms` | `26.5 ms` | `✅ PASS` |
+| **95** | `94.98` | `13.7 ms` | `18.6 ms` | `✅ PASS` | `94.75` | `218.6 ms` | `346.5 ms` | `⚠️ SATURATED` |
+| **100** | `99.98` | `15.7 ms` | `17.4 ms` | `✅ PASS` | `96.32` | `1031 ms` | `2185 ms` | `⚠️ SATURATED` |
+| **110** | `109.96` | `15.3 ms` | `16.9 ms` | `✅ PASS` | `96.74` | `3208 ms` | `5170 ms` | `⚠️ SATURATED` |
+| **120** | `119.95` | `14.4 ms` | `15.9 ms` | `✅ PASS` | — | — | — | `⚠️ SATURATED` |
+| **130** | `129.93` | `13.8 ms` | `15.8 ms` | `✅ PASS` | — | — | — | `⚠️ SATURATED` |
+| **140** | `139.93` | `13.3 ms` | `17.6 ms` | `✅ PASS` | — | — | — | `⚠️ SATURATED` |
+| **150** | `149.91` | `12.9 ms` | `15.8 ms` | `✅ PASS` | — | — | — | `⚠️ SATURATED` |
+| **155** | `154.92` | `12.7 ms` | `17.9 ms` | `✅ PASS` | — | — | — | `⚠️ SATURATED` |
+| **160** | `159.91` | `12.7 ms` | `29.7 ms` | `✅ PASS` | — | — | — | `⚠️ SATURATED` |
+| **165** | **`164.83`** | **`15.7 ms`** | **`42.9 ms`** | **`✅ PASS`** | — | — | — | `⚠️ SATURATED` |
+| **170** | `169.87` | `73.1 ms` | `132.7 ms` | `⚠️ SATURATED` | — | — | — | `⚠️ SATURATED` |
 
 ---
 
@@ -90,25 +97,27 @@
 
 | Payload Size | NVIDIA L4 (`$0.70/hr`) | Cloud TPU v5e (`$1.20/hr`) | Cloud TPU v6e Megakernel (`$2.70/hr`) | TPU v6e `P50` at Max RPS | TPU v6e `P99` at Max RPS | TPU v6e Gain vs L4 | TPU v6e Gain vs TPU v5e |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **`1KB (1,024 chars ≈ 1,009 tokens)`** | `70 RPS` | `180 RPS` | **`270 RPS`** | `19.0 ms` | `28.3 ms` | **`3.86x (+285.7%)`** | **`1.50x (+50.0%)`** |
-| **`2KB (2,048 chars ≈ 2,016 tokens)`** | `40 RPS` | `90 RPS` | **`150 RPS`** | `13.9 ms` | `31.1 ms` | **`3.75x (+275.0%)`** | **`1.67x (+66.7%)`** |
+| **`1KB (1,024 chars ≈ 1,009 tokens)`** | `70 RPS` | `180 RPS` | **`280 RPS`** | `20.3 ms` | `36.8 ms` | **`4.00x (+300.0%)`** | **`1.56x (+55.6%)`** |
+| **`2KB (2,048 chars ≈ 2,016 tokens)`** | `40 RPS` | `90 RPS` | **`165 RPS`** | `15.7 ms` | `42.9 ms` | **`4.13x (+312.5%)`** | **`1.83x (+83.3%)`** |
 
 ---
 
 ### 2.3 Revised Cost Improvement & Fleet TCO Analysis (`OD Prices: L4 = $0.70/hr, TPU v5e = $1.20/hr, TPU v6e = $2.70/hr`)
 
-| Payload Size | Platform | OD Price (`$/hr`) | Max RPS (`<50ms P99`) | Throughput per Dollar (`RPS/$/hr`) | Relative Perf/$ vs L4 | Cost per Request vs L4 | Effective RPS @ `40%` Util | Chips for `1,000 RPS` (`@40%`) | Monthly Cost (`1,000 RPS` @ `40%`) | Fleet TCO Summary vs L4 |
+| Payload Size | Platform | OD Price (`$/hr`) | Max RPS (`<50ms P99`) | Throughput per Dollar (`RPS/$/hr`) | Relative Perf/$ vs L4 | Cost per Request vs L4 (`@40% Util`) | Effective RPS @ `40%` Util | Chips for `1,000 RPS` (`@40%`) | Monthly Cost (`1,000 RPS` @ `40%`) | Fleet TCO Summary vs L4 |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **`1KB`** | **NVIDIA L4** | `\$0.70` | `70 RPS` | `100.00 RPS/\$` | `1.00x (Baseline)` | `Baseline` | `28.0 RPS` | `36` | `\$18,396 / mo` (`\$18,250` exact) | `Baseline (36 GPUs)` |
-| **`1KB`** | **Cloud TPU v5e (`FP32`)** | `\$1.20` | `180 RPS` | **`150.00 RPS/\$`** | **`1.50x (+50.0%)`** | **`-33.3% Cost / Req`** | `72.0 RPS` | `14` | **`\$12,264 / mo`** (`\$12,167` exact) | **`-33.3% (\$6,132/mo saved, 14 chips)`** |
-| **`1KB`** | **Cloud TPU v6e (`FP32` Megakernel)** | `\$2.70` | **`270 RPS`** | **`100.00 RPS/\$`** | **`1.00x (Parity with L4)`** | **`0.0% (Exact Cost Parity)`** | **`108.0 RPS`** | **`10`** | **`\$19,710 / mo`** (`\$18,250` exact) | **`Cost Parity with L4 (3.6x fewer nodes: 10 vs 36)`** |
-| **`2KB`** | **NVIDIA L4** | `\$0.70` | `40 RPS` | `57.14 RPS/\$` | `1.00x (Baseline)` | `Baseline` | `16.0 RPS` | `63` | `\$32,193 / mo` (`\$31,938` exact) | `Baseline (63 GPUs)` |
-| **`2KB`** | **Cloud TPU v5e (`FP32`)** | `\$1.20` | `90 RPS` | **`75.00 RPS/\$`** | **`1.31x (+31.3%)`** | **`-23.8% Cost / Req`** | `36.0 RPS` | `28` | **`\$24,528 / mo`** (`\$24,333` exact) | **`-23.8% (\$7,665/mo saved, 28 chips)`** |
-| **`2KB`** | **Cloud TPU v6e (`FP32` Megakernel)** | `\$2.70` | **`150 RPS`** | **`55.56 RPS/\$`** | **`0.97x (~Parity with L4)`** | `+2.8% Cost / Req vs L4` | **`60.0 RPS`** | **`17`** | **`\$33,507 / mo`** (`\$32,850` exact) | **`Near-Parity with L4 (3.7x fewer nodes: 17 vs 63)`** |
+| **`1KB`** | **NVIDIA L4** | `\$0.70` | `70 RPS` | `100.00 RPS/\$` | `1.00x (Baseline)` | `Baseline (\$6.94 / 1M req)` | `28.0 RPS` | `36` | `\$18,396 / mo` (`\$18,250` exact) | `Baseline (36 GPUs)` |
+| **`1KB`** | **Cloud TPU v5e (`FP32`)** | `\$1.20` | `180 RPS` | **`150.00 RPS/\$`** | **`1.50x (+50.0%)`** | **`-33.3% (\$4.63 / 1M req)`** | `72.0 RPS` | `14` | **`\$12,264 / mo`** (`\$12,167` exact) | **`-33.3% (\$6,132/mo saved, 14 chips)`** |
+| **`1KB`** | **Cloud TPU v6e (`FP32` Megakernel)** | `\$2.70` | **`280 RPS`** | **`103.70 RPS/\$`** | **`1.04x (+3.7% vs L4)`** | **`-3.6% (\$6.70 / 1M req)`** | **`112.0 RPS`** | **`9`** | **`\$17,739 / mo`** (`\$17,600` exact) | **`-3.6% vs L4 (\$657/mo saved, 4.0x fewer nodes: 9 vs 36)`** |
+| **`2KB`** | **NVIDIA L4** | `\$0.70` | `40 RPS` | `57.14 RPS/\$` | `1.00x (Baseline)` | `Baseline (\$12.15 / 1M req)` | `16.0 RPS` | `63` | `\$32,193 / mo` (`\$31,938` exact) | `Baseline (63 GPUs)` |
+| **`2KB`** | **Cloud TPU v5e (`FP32`)** | `\$1.20` | `90 RPS` | **`75.00 RPS/\$`** | **`1.31x (+31.3%)`** | **`-23.8% (\$9.26 / 1M req)`** | `36.0 RPS` | `28` | **`\$24,528 / mo`** (`\$24,333` exact) | **`-23.8% (\$7,665/mo saved, 28 chips)`** |
+| **`2KB`** | **Cloud TPU v6e (`FP32` Megakernel)** | `\$2.70` | **`165 RPS`** | **`61.11 RPS/\$`** | **`1.07x (+7.0% vs L4)`** | **`-6.5% (\$11.36 / 1M req)`** | **`66.0 RPS`** | **`16`** | **`\$31,536 / mo`** (`\$29,864` exact) | **`-6.5% exact (-2.0% fleet, \$657/mo saved, 3.94x fewer nodes: 16 vs 63)`** |
 
 > [!NOTE]
-> **Key TCO Takeaways Under `L4 = $0.70/hr`, `TPU v5e = $1.20/hr`, `TPU v6e = $2.70/hr`**:
-> 1. **Cloud TPU v5e (`\$1.20/hr`) is the Price-Performance / TCO Leader**: Delivers **`1.50x` (`+50.0%`) higher `RPS/\$` on `1KB`** (`150.0` vs `100.0 RPS/\$/hr`, **`-33.3%` lower monthly TCO**) and **`1.31x` (`+31.3%`) higher `RPS/\$` on `2KB`** (`75.0` vs `57.14 RPS/\$/hr`, **`-23.8%` lower monthly TCO**) compared to NVIDIA L4 (`\$0.70/hr`).
-> 2. **Cloud TPU v6e (`\$2.70/hr`) with the 4-Layer Fused `FP32` Megakernel Achieves Full Cost Parity with L4 While Delivering `3.75x–3.86x` Higher Density**:
->    - Even though TPU v6e costs **`3.86x` more per hour than L4 (`\$2.70` vs `\$0.70`)**, the 2048-capped Megakernel delivers **`3.86x` the `1KB` throughput (`270 RPS` vs `70 RPS`)** and **`3.75x` the `2KB` throughput (`150 RPS` vs `40 RPS`)** — resulting in **exact `100.00 RPS/\$/hr` cost parity on `1KB`** and **`97.2%` cost parity (`55.56` vs `57.14 RPS/\$/hr`) on `2KB`**, while shrinking a `1,000 RPS` (`@40%` utilization) fleet from **`36–63` L4 GPUs down to just `10–17` TPU v6e chips** and cutting `P50`/`P99` latency by **`43%–56%`**.
->    - Compared to TPU v5e (`\$1.20/hr`), TPU v6e (`\$2.70/hr`) costs `2.25x` more per hour while delivering `1.50x` (`1KB`) to `1.67x` (`2KB`) more `FP32` throughput per chip, making **TPU v5e optimal for pure TCO minimization** and **TPU v6e optimal when maximizing per-chip throughput density, minimizing tail latency, or deploying in `v6e`-rich regions (`us-east5`, `us-south1`)**.
+> **Key Takeaways Under `L4 = $0.70/hr`, `TPU v5e = $1.20/hr`, `TPU v6e = $2.70/hr` After Megakernel Optimizations**:
+> 1. **Cloud TPU v6e (`\$2.70/hr`) Beats NVIDIA L4 (`\$0.70/hr`) on BOTH Throughput (`4.00x–4.13x`) AND Price-Performance (`+3.7%` to `+7.0%` `RPS/\$`)**:
+>    - Although TPU v6e costs `3.86x` more per hour than L4 (`\$2.70` vs `\$0.70`), the optimized 2048-capped `FP32` Megakernel (`commit 8a096d8c`) delivers **`4.00x` the `1KB` throughput (`280 RPS` vs `70 RPS`)** and **`4.13x` the `2KB` throughput (`165 RPS` vs `40 RPS`)** under the `< 50 ms` `P99` SLA.
+>    - This yields **`103.70 RPS/\$/hr` (`+3.7%` vs L4)** on `1KB` and **`61.11 RPS/\$/hr` (`+7.0%` vs L4)** on `2KB`, shrinking a `1,000 RPS` (`@40%` utilization) fleet from **`36–63` L4 GPUs down to just `9–16` TPU v6e chips** (`75%` fewer nodes) while cutting `P50`/`P99` latency by **`43%–56%`**.
+> 2. **Cloud TPU v5e (`\$1.20/hr`) Remains the Pure TCO Leader (`-23.8%` to `-33.3%` vs L4)**:
+>    - Delivers **`150.00 RPS/\$/hr` on `1KB`** (`1.50x` L4) and **`75.00 RPS/\$/hr` on `2KB`** (`1.31x` L4).
+>    - Meanwhile, **Cloud TPU v6e (`\$2.70/hr`) delivers `+55.6%` (`1.56x`) higher `1KB` RPS (`280` vs `180 RPS`) and `+83.3%` (`1.83x`) higher `2KB` RPS (`165` vs `90 RPS`) per chip than TPU v5e**, making v6e ideal when maximizing per-node density (`9–16` chips vs `14–28` v5e chips or `36–63` L4 GPUs) or deploying in `v6e`-rich regions (`us-east5`, `us-south1`).
