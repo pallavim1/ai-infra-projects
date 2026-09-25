@@ -1,4 +1,5 @@
 {
+  "accelerator": "Google Cloud TPU v6e (ct6e-standard-1t) with 4-Layer Fused FP32 Megakernel (jina_v6e_4layer_megakernel)",
   "vllm_config": "vllm serve jinaai/jina-embeddings-v2-small-en --runner pooling --convert embed --trust-remote-code --max-model-len 2048 --dtype float32 --max-num-seqs 40 --max-num-batched-tokens 8192",
   "payload_definition": "Random characters: 1KB (1,024 chars \u2248 1,009 tokens) and 2KB (2,048 chars \u2248 2,016 tokens). Strictly 1KB & 2KB only.",
   "batch_request_testing": [
@@ -152,9 +153,9 @@
     },
     {
       "rps": 200,
-      "achieved": 199.75,
-      "p50": "17.1 ms",
-      "p99": "43.7 ms",
+      "achieved": 199.88,
+      "p50": "13.3 ms",
+      "p99": "38.8 ms",
       "sla": "\u2705 PASS",
       "zhemin_achieved": 189,
       "zhemin_p50": "1709 ms",
@@ -162,10 +163,43 @@
       "zhemin_sla": "\u26a0\ufe0f SATURATED"
     },
     {
+      "rps": 205,
+      "achieved": 204.53,
+      "p50": "24.0 ms",
+      "p99": "45.0 ms",
+      "sla": "\u2705 PASS",
+      "zhemin_achieved": "-",
+      "zhemin_p50": "-",
+      "zhemin_p99": "-",
+      "zhemin_sla": "\u26a0\ufe0f SATURATED"
+    },
+    {
+      "rps": 210,
+      "achieved": 209.64,
+      "p50": "11.5 ms",
+      "p99": "39.8 ms",
+      "sla": "\u2705 PASS",
+      "zhemin_achieved": "-",
+      "zhemin_p50": "-",
+      "zhemin_p99": "-",
+      "zhemin_sla": "\u26a0\ufe0f SATURATED"
+    },
+    {
+      "rps": 215,
+      "achieved": 214.68,
+      "p50": "20.7 ms",
+      "p99": "36.8 ms",
+      "sla": "\u2705 PASS (Max <50ms Ceiling)",
+      "zhemin_achieved": "-",
+      "zhemin_p50": "-",
+      "zhemin_p99": "-",
+      "zhemin_sla": "\u26a0\ufe0f SATURATED"
+    },
+    {
       "rps": 220,
-      "achieved": 219.64,
-      "p50": "40.0 ms",
-      "p99": "79.1 ms",
+      "achieved": 219.08,
+      "p50": "28.7 ms",
+      "p99": "77.0 ms",
       "sla": "\u26a0\ufe0f SATURATED",
       "zhemin_achieved": 187.9,
       "zhemin_p50": "3738 ms",
@@ -257,6 +291,17 @@
       "p50": "12.2 ms",
       "p99": "15.4 ms",
       "sla": "\u2705 PASS",
+      "zhemin_achieved": "-",
+      "zhemin_p50": "-",
+      "zhemin_p99": "-",
+      "zhemin_sla": "\u26a0\ufe0f SATURATED"
+    },
+    {
+      "rps": 155,
+      "achieved": 154.9,
+      "p50": "12.8 ms",
+      "p99": "22.3 ms",
+      "sla": "\u2705 PASS (Max <50ms Ceiling)",
       "zhemin_achieved": "-",
       "zhemin_p50": "-",
       "zhemin_p99": "-",

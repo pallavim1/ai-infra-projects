@@ -17,8 +17,11 @@ RPS,TPU v6e Megakernel Achieved,TPU v6e Megakernel P50,TPU v6e Megakernel P99,TP
 160,159.91,10.6 ms,12.3 ms,✅ PASS,160,16.8 ms,24.2 ms,✅ PASS
 180,179.89,10.4 ms,12.7 ms,✅ PASS,180.1,19.9 ms,29.6 ms,✅ PASS
 190,189.86,10.5 ms,15.4 ms,✅ PASS,187.8,523.7 ms,762.7 ms,⚠️ SATURATED
-200,199.75,17.1 ms,43.7 ms,✅ PASS,189,1709 ms,2818 ms,⚠️ SATURATED
-220,219.64,40.0 ms,79.1 ms,⚠️ SATURATED,187.9,3738 ms,6182 ms,⚠️ SATURATED
+200,199.88,13.3 ms,38.8 ms,✅ PASS,189,1709 ms,2818 ms,⚠️ SATURATED
+205,204.53,24.0 ms,45.0 ms,✅ PASS,-,-,-,⚠️ SATURATED
+210,209.64,11.5 ms,39.8 ms,✅ PASS,-,-,-,⚠️ SATURATED
+215,214.68,20.7 ms,36.8 ms,✅ PASS (Max <50ms Ceiling),-,-,-,⚠️ SATURATED
+220,219.08,28.7 ms,77.0 ms,⚠️ SATURATED,187.9,3738 ms,6182 ms,⚠️ SATURATED
 
 2KB Dedicated Saturation
 RPS,TPU v6e Megakernel Achieved,TPU v6e Megakernel P50,TPU v6e Megakernel P99,TPU v6e Megakernel SLA,Zhemin TPU v5e Achieved,Zhemin TPU v5e P50,Zhemin TPU v5e P99,Zhemin TPU v5e SLA
@@ -30,4 +33,5 @@ RPS,TPU v6e Megakernel Achieved,TPU v6e Megakernel P50,TPU v6e Megakernel P99,TP
 130,129.92,12.4 ms,13.8 ms,✅ PASS,-,-,-,⚠️ SATURATED
 140,139.92,12.2 ms,14.2 ms,✅ PASS,-,-,-,⚠️ SATURATED
 150,149.91,12.2 ms,15.4 ms,✅ PASS,-,-,-,⚠️ SATURATED
+155,154.9,12.8 ms,22.3 ms,✅ PASS (Max <50ms Ceiling),-,-,-,⚠️ SATURATED
 160,159.9,49.2 ms,111.2 ms,⚠️ SATURATED,-,-,-,⚠️ SATURATED

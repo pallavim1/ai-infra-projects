@@ -1,7 +1,8 @@
 # Jina Embedding (`jina-embeddings-v2-small-en`) — TPU v6e (`FP32` Megakernel) Benchmark Results (Zhemin AS-IS Format)
 
-## Test Configuration (Matching Zhemin's Baseline AS-IS)
+## Test Configuration (Matching Zhemin's Baseline AS-IS + TPU v6e 4-Layer Fused Megakernel)
 * **Model**: `jinaai/jina-embeddings-v2-small-en` (`FP32` / `float32`)
+* **Accelerator & Kernel**: `1x Google Cloud TPU v6e (ct6e-standard-1t)` running the **4-Layer Fused TPU v6e `FP32` Megakernel (`jina_v6e_4layer_megakernel`)** + **Pipelined Bounded Micro-Batcher (`megakernel_proxy.py`)**
 * **`vLLM` Server Config**:
   ```bash
   vllm serve jinaai/jina-embeddings-v2-small-en \
@@ -32,7 +33,7 @@
 
 ---
 
-## 2. 1KB Dedicated Saturation (`1,024 chars ≈ 1K tokens`, `FP32`)
+## 2. 1KB Dedicated Saturation (`1,024 random chars ≈ 1K tokens`, `FP32`)
 
 | RPS | **TPU v6e Megakernel (`FP32`)**<br>Achieved | **TPU v6e Megakernel (`FP32`)**<br>P50 | **TPU v6e Megakernel (`FP32`)**<br>P99 | **TPU v6e Megakernel (`FP32`)**<br>SLA (`P99 < 50 ms`) | **Zhemin TPU v5e (`FP32`)**<br>Achieved / P50 / P99 / SLA |
 | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -40,18 +41,21 @@
 | **120** | **119.97** | **8.7 ms** | **12.4 ms** | **✅ PASS** | `120` \| `11.8 ms` \| `15.5 ms` \| `✅ PASS` |
 | **140** | **139.94** | **11.0 ms** | **12.6 ms** | **✅ PASS** | `140` \| `11.6 ms` \| `18.5 ms` \| `✅ PASS` |
 | **160** | **159.91** | **10.6 ms** | **12.3 ms** | **✅ PASS** | `160` \| `16.8 ms` \| `24.2 ms` \| `✅ PASS` |
-| **180** | **179.89** | **10.4 ms** | **12.7 ms** | **✅ PASS** | `180.1` \| `19.9 ms` \| `29.6 ms` \| `✅ PASS` |
+| **180** | **179.89** | **10.4 ms** | **12.7 ms** | **✅ PASS** | `180.1` \| `19.9 ms` \| `29.6 ms` \| `✅ PASS` *(v5e Max)* |
 | **190** | **189.86** | **10.5 ms** | **15.4 ms** | **✅ PASS** | `187.8` \| `523.7 ms` \| `762.7 ms` \| `⚠️ SATURATED` |
-| **200** | **199.75** | **17.1 ms** | **43.7 ms** | **✅ PASS** | `189` \| `1709 ms` \| `2818 ms` \| `⚠️ SATURATED` |
-| **220** | **219.64** | **40.0 ms** | **79.1 ms** | **⚠️ SATURATED** | `187.9` \| `3738 ms` \| `6182 ms` \| `⚠️ SATURATED` |
+| **200** | **199.88** | **13.3 ms** | **38.8 ms** | **✅ PASS** | `189` \| `1709 ms` \| `2818 ms` \| `⚠️ SATURATED` |
+| **205** | **204.53** | **24.0 ms** | **45.0 ms** | **✅ PASS** | — *(Saturated at 190 RPS)* |
+| **210** | **209.64** | **11.5 ms** | **39.8 ms** | **✅ PASS** | — *(Saturated at 190 RPS)* |
+| **215** | **214.68** | **20.7 ms** | **36.8 ms** | **✅ PASS (Max `< 50 ms` Ceiling)** | — *(Saturated at 190 RPS)* |
+| **220** | **219.08** | **28.7 ms** | **77.0 ms** | **⚠️ SATURATED** | `187.9` \| `3738 ms` \| `6182 ms` \| `⚠️ SATURATED` |
 
 ---
 
-## 3. 2KB Dedicated Saturation (`2,048 chars ≈ 2K tokens`, `FP32`)
+## 3. 2KB Dedicated Saturation (`2,048 random chars ≈ 2K tokens`, `FP32`)
 
 | RPS | **TPU v6e Megakernel (`FP32`)**<br>Achieved | **TPU v6e Megakernel (`FP32`)**<br>P50 | **TPU v6e Megakernel (`FP32`)**<br>P99 | **TPU v6e Megakernel (`FP32`)**<br>SLA (`P99 < 50 ms`) | **Zhemin TPU v5e (`FP32`)**<br>Achieved / P50 / P99 / SLA |
 | :---: | :---: | :---: | :---: | :---: | :---: |
-| **90** | **89.99** | **10.7 ms** | **12.9 ms** | **✅ PASS** | `90` \| `17.2 ms` \| `26.5 ms` \| `✅ PASS` |
+| **90** | **89.99** | **10.7 ms** | **12.9 ms** | **✅ PASS** | `90` \| `17.2 ms` \| `26.5 ms` \| `✅ PASS` *(v5e Max)* |
 | **95** | **94.99** | **10.7 ms** | **12.7 ms** | **✅ PASS** | `94.75` \| `218.6 ms` \| `346.5 ms` \| `⚠️ SATURATED` |
 | **100** | **99.98** | **11.7 ms** | **15.4 ms** | **✅ PASS** | `96.32` \| `1031 ms` \| `2185 ms` \| `⚠️ SATURATED` |
 | **110** | **109.95** | **13.7 ms** | **15.1 ms** | **✅ PASS** | `96.74` \| `3208 ms` \| `5170 ms` \| `⚠️ SATURATED` |
@@ -59,4 +63,5 @@
 | **130** | **129.92** | **12.4 ms** | **13.8 ms** | **✅ PASS** | — *(Saturated at 95 RPS)* |
 | **140** | **139.92** | **12.2 ms** | **14.2 ms** | **✅ PASS** | — *(Saturated at 95 RPS)* |
 | **150** | **149.91** | **12.2 ms** | **15.4 ms** | **✅ PASS** | — *(Saturated at 95 RPS)* |
+| **155** | **154.90** | **12.8 ms** | **22.3 ms** | **✅ PASS (Max `< 50 ms` Ceiling)** | — *(Saturated at 95 RPS)* |
 | **160** | **159.90** | **49.2 ms** | **111.2 ms** | **⚠️ SATURATED** | — *(Saturated at 95 RPS)* |
