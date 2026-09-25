@@ -1,42 +1,52 @@
-"Concurrent Request Comparison (TPU V6e FP32 4-Layer Fused Megakernel vs L4 GPU & V6e FP32 Baseline — <= 2K Scope, 20260924_224325)"
-P50
-Payload Size,Concurrency,TPU V6e FP32 Megakernel Tput (req/s),TPU V6e FP32 Megakernel (p50),TPU V6e FP32 Baseline (p50),L4 GPU (p50),Absolute Delta (Megakernel vs L4),% Reduction vs L4,Faster Setup
-1KB,1,101.8,9.51ms,10.2ms,20.7ms,TPU v6e Megakernel is 11.2ms faster,54.1% lower latency,TPU v6e Megakernel (Wins 8/8!)
-1KB,4,191.1,20.71ms,22.3ms,38.1ms,TPU v6e Megakernel is 17.4ms faster,45.6% lower latency,TPU v6e Megakernel (Wins 8/8!)
-1KB,8,195.36,39.31ms,41.2ms,58.7ms,TPU v6e Megakernel is 19.4ms faster,33.0% lower latency,TPU v6e Megakernel (Wins 8/8!)
-1KB,16,222.46,74.34ms,75.8ms,96.5ms,TPU v6e Megakernel is 22.2ms faster,23.0% lower latency,TPU v6e Megakernel (Wins 8/8!)
-2KB,1,79.33,11.78ms,12.5ms,24.3ms,TPU v6e Megakernel is 12.5ms faster,51.5% lower latency,TPU v6e Megakernel (Wins 8/8!)
-2KB,4,117.98,34.59ms,37.3ms,52.1ms,TPU v6e Megakernel is 17.5ms faster,33.6% lower latency,TPU v6e Megakernel (Wins 8/8!)
-2KB,8,124.46,65.38ms,70.0ms,87.4ms,TPU v6e Megakernel is 22.0ms faster,25.2% lower latency,TPU v6e Megakernel (Wins 8/8!)
-2KB,16,172.29,92.0ms,135.7ms,156.9ms,TPU v6e Megakernel is 64.9ms faster,41.4% lower latency,TPU v6e Megakernel (Wins 8/8!)
+SECTION 1: k6 Online Constant-Arrival-Rate Saturation Sweep (<50ms Latency SLA) - 1KB & 2KB ONLY
+Payload,Target RPS,Achieved RPS,p50 (ms),p90 (ms),p95 (ms),p99 (ms),avg (ms),min (ms),max (ms),Dropped,<50ms p99 SLA,<50ms p50 SLA
+1KB,100,100.0,7.3,8.1,8.3,11.0,7.6,6.8,48.8,0,PASS (<50ms),PASS (<50ms)
+1KB,140,140.0,7.5,8.4,8.6,9.4,7.6,6.7,12.1,0,PASS (<50ms),PASS (<50ms)
+1KB,180,179.9,12.2,16.4,17.2,19.4,13.1,9.6,22.8,0,PASS (<50ms),PASS (<50ms)
+1KB,220,219.8,18.6,23.1,25.3,29.6,18.4,10.0,38.0,0,PASS (<50ms),PASS (<50ms)
+1KB,260,259.9,14.2,22.3,26.0,31.5,15.5,7.8,36.1,0,PASS (<50ms),PASS (<50ms)
+1KB,300,299.7,20.2,29.6,31.6,35.6,20.7,8.9,41.0,0,PASS (<50ms),PASS (<50ms)
+1KB,340,339.4,28.1,37.2,38.8,43.0,27.9,9.9,49.3,0,PASS (<50ms),PASS (<50ms)
+1KB,360,359.3,29.1,38.3,40.4,43.8,29.0,10.5,49.0,0,PASS (<50ms),PASS (<50ms)
+1KB,380,379.1,32.4,42.1,44.0,46.6,32.0,10.8,54.3,0,PASS (<50ms),PASS (<50ms)
+1KB,400,399.1,33.8,44.6,46.4,48.7,33.6,10.8,53.3,0,PASS (<50ms),PASS (<50ms)
+1KB,420,419.1,36.6,48.7,51.4,57.8,36.9,11.8,64.2,0,EXCEEDS 50ms,PASS (<50ms)
+1KB,440,438.2,38.5,53.8,57.3,63.8,39.2,11.2,73.5,0,EXCEEDS 50ms,PASS (<50ms)
+2KB,70,70.0,7.9,8.1,8.2,8.8,7.9,7.5,10.6,0,PASS (<50ms),PASS (<50ms)
+2KB,90,90.0,7.8,8.4,8.7,11.4,8.0,7.4,39.2,0,PASS (<50ms),PASS (<50ms)
+2KB,110,110.0,8.1,8.7,9.0,10.1,8.2,7.5,15.4,0,PASS (<50ms),PASS (<50ms)
+2KB,140,140.0,9.8,10.5,10.7,11.2,9.6,7.4,13.6,0,PASS (<50ms),PASS (<50ms)
+2KB,160,159.9,10.2,10.8,11.0,11.4,10.2,8.4,12.6,0,PASS (<50ms),PASS (<50ms)
+2KB,180,179.9,9.6,10.2,10.4,10.8,9.7,8.4,13.1,0,PASS (<50ms),PASS (<50ms)
+2KB,200,199.9,9.5,10.6,11.3,13.6,9.7,8.1,20.6,0,PASS (<50ms),PASS (<50ms)
+2KB,220,219.9,10.4,15.0,17.9,21.9,11.4,8.2,28.3,0,PASS (<50ms),PASS (<50ms)
+2KB,240,239.8,13.6,19.9,23.4,28.6,14.8,8.7,37.0,0,PASS (<50ms),PASS (<50ms)
+2KB,260,259.8,24.2,34.7,36.3,41.2,24.8,11.1,48.0,0,PASS (<50ms),PASS (<50ms)
+2KB,280,279.6,28.8,40.9,44.3,49.1,29.4,11.3,55.7,0,PASS (<50ms),PASS (<50ms)
+2KB,300,299.3,38.3,50.6,52.5,55.6,37.9,10.5,58.7,0,EXCEEDS 50ms,PASS (<50ms)
 
-p99
-Payload Size,Concurrency,TPU V6e FP32 Megakernel Tput (req/s),TPU V6e FP32 Megakernel (p99),TPU V6e FP32 Baseline (p99),L4 GPU (p99),Absolute Delta (Megakernel vs L4),% Reduction vs L4,Faster Setup
-1KB,1,101.8,12.22ms,12.9ms,23.5ms,TPU v6e Megakernel is 11.3ms faster,48.0% lower latency,TPU v6e Megakernel
-1KB,4,191.1,31.67ms,31.7ms,42.9ms,TPU v6e Megakernel is 11.2ms faster,26.2% lower latency,TPU v6e Megakernel
-1KB,8,195.36,58.71ms,54.7ms,66.3ms,TPU v6e Megakernel is 7.6ms faster,11.4% lower latency,TPU v6e Megakernel
-1KB,16,222.46,104.57ms,97.6ms,107.6ms,TPU v6e Megakernel is 3.0ms faster,2.8% lower latency,TPU v6e Megakernel
-2KB,1,79.33,17.25ms,16.7ms,28.2ms,TPU v6e Megakernel is 10.9ms faster,38.8% lower latency,TPU v6e Megakernel
-2KB,4,117.98,54.72ms,49.0ms,58.2ms,TPU v6e Megakernel is 3.5ms faster,6.0% lower latency,TPU v6e Megakernel
-2KB,8,124.46,97.86ms,90.1ms,97.3ms,Tied within 0.6ms (Megakernel +52% higher RPS),0.6% delta,Tied p99 (Megakernel 124.5 RPS vs L4 81.8 RPS)
-2KB,16,172.29,141.87ms,183.5ms,175.5ms,TPU v6e Megakernel is 33.6ms faster,19.2% lower latency,TPU v6e Megakernel
+"SECTION 2: Token-Length Batch Sweep - STRICTLY 1K (1,024 Tokens) & 2K (2,048 Tokens) ONLY"
+Token Length,Batch Size,Total Batched Tokens,Seq Throughput (seq/s),Token Throughput (tok/s),p50 Latency (ms),p99 Latency (ms),<50ms Latency Limit
+1024,1,1024,77.3,79145.0,12.8,13.9,PASS (<50ms)
+1024,8,8192,119.4,122296.3,64.9,72.4,EXCEEDS 50ms
+1024,16,16384,127.2,130293.8,125.0,132.0,EXCEEDS 50ms
+1024,32,32768,130.6,133775.4,244.3,250.6,EXCEEDS 50ms
+1024,64,65536,133.1,136253.4,480.4,487.7,EXCEEDS 50ms
+1024,128,131072,134.7,137881.6,950.3,960.2,EXCEEDS 50ms
+2048,1,2048,71.1,145612.8,14.1,15.3,PASS (<50ms)
+2048,8,16384,106.2,217477.1,74.1,79.6,EXCEEDS 50ms
+2048,16,32768,112.8,231034.9,141.7,149.6,EXCEEDS 50ms
+2048,32,65536,116.2,237957.1,274.9,281.7,EXCEEDS 50ms
+2048,64,131072,117.7,241070.1,545.1,551.4,EXCEEDS 50ms
+2048,128,262144,120.4,246517.8,1065.0,1070.7,EXCEEDS 50ms
 
-RPS Saturation Result (Strictly <= 2K Scope: 1K & 2K — SLA P99 < 50 ms & Max Zero-Drop RPS)
-Payload,Setup,Max SLA RPS (P99 < 50ms),Max Zero-Drop Sustained RPS,p50 at SLA / Peak,p99 at SLA / Peak,RPS Improvement vs L4 ((TPU - L4) / L4)
-1K,L4 + Triton (FP16),70,155.0,20.0ms,37.0ms,Baseline
-1K,TPU V5e + vLLM Baseline (FP32),140,172.0,18.7ms,27.6ms,+100.0% SLA RPS (2.00x) / +11.0% Max RPS
-1K,TPU V6e + vLLM Baseline (FP32),160,218.2,10.3ms,13.7ms,+128.6% SLA RPS (2.29x) / +40.8% Max RPS
-1K,TPU V6e + vLLM MEGAKERNEL (FP32),160 (395.6 RPS @ 0 dropped),395.6,11.4ms (@100) / 151.4ms (@400),15.8ms (@100) / 220.4ms (@400),"+128.6% SLA RPS / +155.2% Max Sustained RPS (2.55x L4, 1.81x v6e Base)"
-2K,L4 + Triton (FP16),40,80.0,22.0ms,28.0ms,Baseline
-2K,TPU V5e + vLLM Baseline (FP32),70,84.8,17.6ms,21.8ms,+75.0% SLA RPS (1.75x) / +6.0% Max RPS
-2K,TPU V6e + vLLM Baseline (FP32),90,114.6,11.0ms,41.0ms,+125.0% SLA RPS (2.25x) / +43.3% Max RPS
-2K,TPU V6e + vLLM MEGAKERNEL (FP32),140 (p99 = 14.0ms!),197.6,12.0ms (@140) / 174.0ms (@200),14.0ms (@140) / 305.5ms (@200),"+250.0% SLA RPS (3.50x L4!) / +147.0% Max Sustained RPS (2.47x L4, 1.72x v6e Base)"
-
-Cost Improvement — Zhemin's 40% Fleet Utilization Model (Cost / 1M Req = Hourly_Cost / (RPS * 0.40 * 0.0036))
-Machine Type & Setup,Machine Config,Hourly Cost,Cost / 1M Req (1K @ SLA RPS),Cost / 1M Req (1K @ Max Zero-Drop RPS),Cost / 1M Req (2K @ SLA P99<50ms RPS),Cost / 1M Req (2K @ Max Zero-Drop RPS),Cost Reduction vs L4 On-Demand
-g2-standard-4 (L4 GPU On-Demand),"1x L4 GPU (24GB), 4 vCPUs, 16GiB",$0.70,$6.94 (70 RPS),$3.14 (155 RPS),$12.15 (40 RPS),$6.08 (80 RPS),Baseline (L4 FP16)
-ct5lp-hightpu-1t (v5e FP32 Baseline On-Demand),"1x TPU v5e (16GB), 24 vCPUs, 45.6GB",$1.20,$5.95 (140 RPS),$4.84 (172 RPS),$11.90 (70 RPS),$9.83 (84.8 RPS),14.3% reduction (1K SLA) / 2.1% reduction (2K SLA)
-ct6e-standard-1t (v6e FP32 Baseline 3-Yr CUD),"1x TPU v6e (32GB), 55% CUD Discount",$1.22,$5.30 (160 RPS),$3.88 (218.2 RPS),$9.41 (90 RPS),$7.39 (114.6 RPS),23.6% reduction (1K SLA) / 22.6% reduction (2K SLA)
-ct6e-standard-1t (v6e FP32 MEGAKERNEL On-Demand),"1x TPU v6e (32GB), On-Demand ($2.70/hr)",$2.70,$11.72 (160 RPS),$4.74 (395.6 RPS),$13.39 (140 RPS @ 14.0ms p99),$9.49 (197.6 RPS),Beat L4 $6.94/$12.15 by 31.7% (1K) & 21.9% (2K) even On-Demand!
-ct6e-standard-1t (v6e FP32 MEGAKERNEL 1-Yr CUD),"1x TPU v6e (32GB), 37% CUD Discount ($1.70/hr)",$1.70,$7.38 (160 RPS),$2.98 (395.6 RPS),$8.43 (140 RPS @ 14.0ms p99),$5.98 (197.6 RPS),30.6% reduction (2K SLA) / 57.1% (1K Max) & 50.8% (2K Max) reduction vs L4
-ct6e-standard-1t (v6e FP32 MEGAKERNEL 3-Yr CUD),"1x TPU v6e (32GB), 55% CUD Discount ($1.22/hr)",$1.22,$5.30 (160 RPS),$2.14 (395.6 RPS),$6.05 (140 RPS @ 14.0ms p99),$4.29 (197.6 RPS),50.2% reduction (2K SLA @ 14ms p99) / 69.2% (1K Max) & 64.7% (2K Max) reduction vs L4!
+"SECTION 3: k6 Closed-Loop Concurrency Sweep (C=1, 4, 8, 16) - 1KB & 2KB ONLY"
+Payload,Concurrency (VUs),Achieved RPS,p50 (ms),p90 (ms),p95 (ms),p99 (ms),avg (ms)
+1KB,1,101.8,9.51,10.86,11.33,12.22,9.67
+1KB,4,191.1,20.71,25.99,27.89,31.67,20.76
+1KB,8,195.36,39.31,48.42,50.1,58.71,40.77
+1KB,16,222.46,74.34,84.23,85.44,104.57,71.61
+2KB,1,79.33,11.78,16.13,16.39,17.25,12.45
+2KB,4,117.98,34.59,40.09,44.16,54.72,33.68
+2KB,8,124.46,65.38,73.42,78.85,97.86,64.02
+2KB,16,172.29,92.0,118.99,129.19,141.87,92.37
