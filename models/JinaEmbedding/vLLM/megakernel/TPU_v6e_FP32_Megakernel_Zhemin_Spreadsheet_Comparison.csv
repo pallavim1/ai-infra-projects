@@ -40,7 +40,7 @@ RPS,TPU v6e Megakernel Achieved,TPU v6e Megakernel P50,TPU v6e Megakernel P99,TP
 155,151.34,122.9 ms,292.1 ms,⚠️ SATURATED,—,—,—,⚠️ SATURATED,,
 160,149.57,456.9 ms,836.6 ms,⚠️ SATURATED,—,—,—,⚠️ SATURATED,,
 
-TPU v6e FP32 Megakernel (Branch: jina-v2-embeddings-clean | Strictly max_model_len=2048) vs TPU v5e & NVIDIA L4 — Matching Zhemin gid=1972899730,,,,,,,,,,
+TPU v6e FP32 Megakernel ($2.70/hr) vs TPU v5e ($1.20/hr) & NVIDIA L4 ($0.70/hr) — Matching Zhemin gid=1972899730,,,,,,,,,,
 ,,,,,,,,,,
 1. Concurrent Request Latency Comparison (1KB & 2KB Random Characters),,,,,,,,,,
 Payload Category,L4 P50 (ms),TPU v5e P50 (ms),TPU v6e Megakernel P50 (ms),v6e vs L4 P50,v6e vs v5e P50,L4 P99 (ms),TPU v5e P99 (ms),TPU v6e Megakernel P99 (ms),v6e vs L4 P99,v6e vs v5e P99
@@ -56,14 +56,14 @@ Payload Size,NVIDIA L4 Max RPS,TPU v5e Max RPS,TPU v6e Megakernel Max RPS (max_l
 "1KB (1,024 chars ≈ 1,009 tokens)",70 RPS,180 RPS,270 RPS,19.0 ms,28.3 ms,3.86x (+285.7%),1.50x (+50.0%),,,
 "2KB (2,048 chars ≈ 2,016 tokens)",40 RPS,90 RPS,150 RPS,13.9 ms,31.1 ms,3.75x (+275.0%),1.67x (+66.7%),,,
 ,,,,,,,,,,
-3. Cost Improvement & Fleet TCO Analysis (100% Max Capacity & 40% Production Fleet Utilization),,,,,,,,,,
-Payload Size,Platform,On-Demand Price ($/hr),Max Validated RPS (<50ms P99),Throughput per Dollar (RPS/$/hr),Relative Perf/$ vs L4,Effective RPS @ 40% Fleet Util,"Chips Needed for 1,000 RPS (@40% Util)","Monthly Fleet Cost (1,000 RPS @ 40% Util)",Monthly TCO Savings vs L4,
-"1KB (1,024 chars)",NVIDIA L4 (g2-standard-8),$1.0124,70 RPS,69.14 RPS/$,1.00x (Baseline),28.0 RPS,36,"$26,606 / mo",Baseline,
-"1KB (1,024 chars)","TPU v5e-1 (ct5lp-hightpu-1t, FP32)",$0.7990,180 RPS,225.28 RPS/$,3.26x (+225.8%),72.0 RPS,14,"$8,166 / mo","-69.3% ($18,440/mo saved)",
-"1KB (1,024 chars)","TPU v6e-1 (ct6e-standard-1t, FP32 Megakernel, max_len=2048)",$0.9990,270 RPS,270.27 RPS/$,3.91x (+290.9%),108.0 RPS,10,"$7,293 / mo","-72.6% ($19,313/mo saved)",
-"2KB (2,048 chars)",NVIDIA L4 (g2-standard-8),$1.0124,40 RPS,39.51 RPS/$,1.00x (Baseline),16.0 RPS,63,"$46,560 / mo",Baseline,
-"2KB (2,048 chars)","TPU v5e-1 (ct5lp-hightpu-1t, FP32)",$0.7990,90 RPS,112.64 RPS/$,2.85x (+185.1%),36.0 RPS,28,"$16,332 / mo","-64.9% ($30,228/mo saved)",
-"2KB (2,048 chars)","TPU v6e-1 (ct6e-standard-1t, FP32 Megakernel, max_len=2048)",$0.9990,150 RPS,150.15 RPS/$,3.80x (+280.0%),60.0 RPS,17,"$12,398 / mo","-73.4% ($34,162/mo saved)",
+"3. Cost Improvement & Fleet TCO Analysis (OD Pricing: L4 = $0.70/hr, TPU v5e = $1.20/hr, TPU v6e = $2.70/hr)",,,,,,,,,,
+Payload Size,Platform,On-Demand Price ($/hr),Max Validated RPS (<50ms P99),Throughput per Dollar (RPS/$/hr),Relative Perf/$ vs L4,Cost per Request vs L4,Effective RPS @ 40% Fleet Util,"Chips Needed for 1,000 RPS (@40% Util)","Monthly Fleet Cost (1,000 RPS @ 40% Util)",Fleet TCO Summary vs L4
+"1KB (1,024 chars)",NVIDIA L4,$0.70,70 RPS,100.00 RPS/$,1.00x (Baseline),Baseline,28.0 RPS,36,"$18,396 / mo ($18,250 exact)",Baseline (36 GPUs)
+"1KB (1,024 chars)",Cloud TPU v5e (FP32),$1.20,180 RPS,150.00 RPS/$,1.50x (+50.0%),-33.3% Cost / Req,72.0 RPS,14,"$12,264 / mo ($12,167 exact)","-33.3% ($6,132/mo saved, 14 chips)"
+"1KB (1,024 chars)","Cloud TPU v6e (FP32 Megakernel, max_len=2048)",$2.70,270 RPS,100.00 RPS/$,1.00x (Parity with L4),0.0% (Exact Cost Parity with L4),108.0 RPS,10,"$19,710 / mo ($18,250 exact)",Cost Parity with L4 (3.6x fewer nodes: 10 vs 36)
+"2KB (2,048 chars)",NVIDIA L4,$0.70,40 RPS,57.14 RPS/$,1.00x (Baseline),Baseline,16.0 RPS,63,"$32,193 / mo ($31,938 exact)",Baseline (63 GPUs)
+"2KB (2,048 chars)",Cloud TPU v5e (FP32),$1.20,90 RPS,75.00 RPS/$,1.31x (+31.3%),-23.8% Cost / Req,36.0 RPS,28,"$24,528 / mo ($24,333 exact)","-23.8% ($7,665/mo saved, 28 chips)"
+"2KB (2,048 chars)","Cloud TPU v6e (FP32 Megakernel, max_len=2048)",$2.70,150 RPS,55.56 RPS/$,0.97x (~Parity with L4),+2.8% Cost / Req vs L4,60.0 RPS,17,"$33,507 / mo ($32,850 exact)",Near-Parity with L4 (3.7x fewer nodes: 17 vs 63)
 ,,,,,,,,,,
 "4. Regional Availability (GCP Americas, Europe, Asia-Pacific)",,,,,,,,,,
 Accelerator,Americas Regions,Europe Regions,Asia-Pacific Regions,,,,,,,

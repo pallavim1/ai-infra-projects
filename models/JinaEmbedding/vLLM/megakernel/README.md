@@ -1,7 +1,7 @@
 # Cloud TPU v6e (`FP32` 4-Layer Fused Megakernel) Benchmark & Cost Report — Strictly `max_model_len = 2048` (`jina-v2-embeddings-clean`)
 
 > [!IMPORTANT]
-> **Tested Engine Branch & Strict `max_model_len = 2048` Configuration**
+> **Tested Engine Branch, Strict `max_model_len = 2048` Configuration & On-Demand Pricing**
 > - **Engine Branch Tested**: [`pallavim1/tpu-inference@jina-v2-embeddings-clean`](https://github.com/pallavim1/tpu-inference/tree/jina-v2-embeddings-clean) (`commit a8733e93`)
 > - **Reports & Docs Branch**: [`pallavim1/tpu-inference@panw-tpu-inference`](https://github.com/pallavim1/tpu-inference/tree/panw-tpu-inference/models/JinaEmbedding/vLLM/megakernel)
 > - **Model & Precision**: `jinaai/jina-embeddings-v2-small-en` (`JinaBertForMaskedLM`, `dtype = float32`)
@@ -9,7 +9,10 @@
 >   1. `JinaBertModel` (`tpu_inference/models/jax/jina_bert.py`) and `jina_v6e_4layer_megakernel` (`tpu_inference/kernels/jina_v6e_megakernel.py`) strictly enforce **`MAX_MODEL_LEN = 2048`** (`T <= 2048`; `4096` and `8192` token buckets are never compiled or executed).
 >   2. `vllm serve` runs with **`--max-model-len 2048 --max-num-batched-tokens 2048 --dtype float32`**.
 >   3. Adapter proxy (`megakernel_proxy.py`) enforces **`"truncate_prompt_tokens": 2048`** on every request.
-> - **Payloads Tested**: Strictly **`1KB` (`1,024` random chars $\approx$ `1,009` tokens)** and **`2KB` (`2,048` random chars $\approx$ `2,016` tokens)**. (`3K`, `5K`, and `7K` tiers are excluded.)
+> - **On-Demand (OD) Hourly Pricing**:
+>   - **NVIDIA L4**: `\$0.70 / hr` (`\$511.00 / mo` per GPU)
+>   - **Cloud TPU v5e**: `\$1.20 / hr` (`\$876.00 / mo` per chip)
+>   - **Cloud TPU v6e**: `\$2.70 / hr` (`\$1,971.00 / mo` per chip)
 
 ---
 
@@ -32,9 +35,6 @@
 ---
 
 ### 1.2 `1KB Dedicated Saturation` (`1,024 chars ≈ 1,009 tokens`, `< 50 ms` `P99` SLA)
-
-> [!TIP]
-> By restricting `JinaBert` and the 4-layer Megakernel on `jina-v2-embeddings-clean` strictly to **`max_model_len = 2048` (`max_num_batched_tokens = 2048`)**, two `1KB` (`1,009`-token) requests pack into a single `T = 2048` forward step (`2,018 <= 2048` tokens) without ever triggering `T = 4096` or `T = 8192` padded attention grids. As a result, **`1KB` saturation reaches `270 RPS` (`P50 = 19.0 ms`, `P99 = 28.3 ms`, `✅ PASS`)** — **`+50.0%` higher RPS than TPU v5e (`180 RPS`)** and **`3.86x` higher RPS than NVIDIA L4 (`70 RPS`)**.
 
 | RPS | TPU v6e Megakernel Achieved | TPU v6e Megakernel `P50` | TPU v6e Megakernel `P99` | TPU v6e Megakernel SLA (`<50ms`) | TPU v5e Achieved (Zhemin) | TPU v5e `P50` (Zhemin) | TPU v5e `P99` (Zhemin) | TPU v5e SLA (Zhemin) |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -71,7 +71,7 @@
 
 ---
 
-## Part 2: Platform Comparison & Cost Improvement Matching Zhemin's `gid=1972899730` Tab (`1KB` & `2KB`)
+## Part 2: Platform Comparison & Revised TCO Analysis Matching `gid=1972899730` (`L4 = $0.70/hr`, `v5e = $1.20/hr`, `v6e = $2.70/hr`)
 
 ### 2.1 Concurrent Request Latency Comparison (`L4` vs `TPU v5e` vs `TPU v6e Megakernel`)
 
@@ -88,20 +88,27 @@
 
 ### 2.2 RPS Saturation Result (`< 50 ms` `P99` Latency SLA)
 
-| Payload Size | NVIDIA L4 (`g2-standard-8`) | TPU v5e-1 (`FP32`) | TPU v6e-1 (`FP32` Megakernel, `max_len=2048`) | TPU v6e `P50` at Max RPS | TPU v6e `P99` at Max RPS | TPU v6e Gain vs L4 | TPU v6e Gain vs TPU v5e |
+| Payload Size | NVIDIA L4 (`$0.70/hr`) | Cloud TPU v5e (`$1.20/hr`) | Cloud TPU v6e Megakernel (`$2.70/hr`) | TPU v6e `P50` at Max RPS | TPU v6e `P99` at Max RPS | TPU v6e Gain vs L4 | TPU v6e Gain vs TPU v5e |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | **`1KB (1,024 chars ≈ 1,009 tokens)`** | `70 RPS` | `180 RPS` | **`270 RPS`** | `19.0 ms` | `28.3 ms` | **`3.86x (+285.7%)`** | **`1.50x (+50.0%)`** |
 | **`2KB (2,048 chars ≈ 2,016 tokens)`** | `40 RPS` | `90 RPS` | **`150 RPS`** | `13.9 ms` | `31.1 ms` | **`3.75x (+275.0%)`** | **`1.67x (+66.7%)`** |
 
 ---
 
-### 2.3 Cost Improvement & Production Fleet TCO (`100%` Max Capacity & `40%` Production Fleet Utilization)
+### 2.3 Revised Cost Improvement & Fleet TCO Analysis (`OD Prices: L4 = $0.70/hr, TPU v5e = $1.20/hr, TPU v6e = $2.70/hr`)
 
-| Payload Size | Platform | On-Demand Price (`$/hr`) | Max Validated RPS (`<50ms P99`) | Throughput per Dollar (`RPS/$/hr`) | Relative Perf/$ vs L4 | Effective RPS @ `40%` Fleet Util | Nodes for `1,000 RPS` (`@40%` Util) | Monthly Cost (`1,000 RPS` @ `40%`) | Monthly TCO Savings vs L4 |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **`1KB`** | **NVIDIA L4 (`g2-standard-8`)** | `\$1.0124` | `70 RPS` | `69.14 RPS/\$` | `1.00x (Baseline)` | `28.0 RPS` | `36` | `\$26,606 / mo` | `Baseline` |
-| **`1KB`** | **TPU v5e-1 (`ct5lp-hightpu-1t`, FP32)** | `\$0.7990` | `180 RPS` | `225.28 RPS/\$` | `3.26x (+225.8%)` | `72.0 RPS` | `14` | `\$8,166 / mo` | **`-69.3% (\$18,440/mo saved)`** |
-| **`1KB`** | **TPU v6e-1 (`ct6e-standard-1t`, FP32 Megakernel)** | `\$0.9990` | **`270 RPS`** | **`270.27 RPS/\$`** | **`3.91x (+290.9%)`** | **`108.0 RPS`** | **`10`** | **`\$7,293 / mo`** | **`-72.6% (\$19,313/mo saved)`** |
-| **`2KB`** | **NVIDIA L4 (`g2-standard-8`)** | `\$1.0124` | `40 RPS` | `39.51 RPS/\$` | `1.00x (Baseline)` | `16.0 RPS` | `63` | `\$46,560 / mo` | `Baseline` |
-| **`2KB`** | **TPU v5e-1 (`ct5lp-hightpu-1t`, FP32)** | `\$0.7990` | `90 RPS` | `112.64 RPS/\$` | `2.85x (+185.1%)` | `36.0 RPS` | `28` | `\$16,332 / mo` | **`-64.9% (\$30,228/mo saved)`** |
-| **`2KB`** | **TPU v6e-1 (`ct6e-standard-1t`, FP32 Megakernel)** | `\$0.9990` | **`150 RPS`** | **`150.15 RPS/\$`** | **`3.80x (+280.0%)`** | **`60.0 RPS`** | **`17`** | **`\$12,398 / mo`** | **`-73.4% (\$34,162/mo saved)`** |
+| Payload Size | Platform | OD Price (`$/hr`) | Max RPS (`<50ms P99`) | Throughput per Dollar (`RPS/$/hr`) | Relative Perf/$ vs L4 | Cost per Request vs L4 | Effective RPS @ `40%` Util | Chips for `1,000 RPS` (`@40%`) | Monthly Cost (`1,000 RPS` @ `40%`) | Fleet TCO Summary vs L4 |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **`1KB`** | **NVIDIA L4** | `\$0.70` | `70 RPS` | `100.00 RPS/\$` | `1.00x (Baseline)` | `Baseline` | `28.0 RPS` | `36` | `\$18,396 / mo` (`\$18,250` exact) | `Baseline (36 GPUs)` |
+| **`1KB`** | **Cloud TPU v5e (`FP32`)** | `\$1.20` | `180 RPS` | **`150.00 RPS/\$`** | **`1.50x (+50.0%)`** | **`-33.3% Cost / Req`** | `72.0 RPS` | `14` | **`\$12,264 / mo`** (`\$12,167` exact) | **`-33.3% (\$6,132/mo saved, 14 chips)`** |
+| **`1KB`** | **Cloud TPU v6e (`FP32` Megakernel)** | `\$2.70` | **`270 RPS`** | **`100.00 RPS/\$`** | **`1.00x (Parity with L4)`** | **`0.0% (Exact Cost Parity)`** | **`108.0 RPS`** | **`10`** | **`\$19,710 / mo`** (`\$18,250` exact) | **`Cost Parity with L4 (3.6x fewer nodes: 10 vs 36)`** |
+| **`2KB`** | **NVIDIA L4** | `\$0.70` | `40 RPS` | `57.14 RPS/\$` | `1.00x (Baseline)` | `Baseline` | `16.0 RPS` | `63` | `\$32,193 / mo` (`\$31,938` exact) | `Baseline (63 GPUs)` |
+| **`2KB`** | **Cloud TPU v5e (`FP32`)** | `\$1.20` | `90 RPS` | **`75.00 RPS/\$`** | **`1.31x (+31.3%)`** | **`-23.8% Cost / Req`** | `36.0 RPS` | `28` | **`\$24,528 / mo`** (`\$24,333` exact) | **`-23.8% (\$7,665/mo saved, 28 chips)`** |
+| **`2KB`** | **Cloud TPU v6e (`FP32` Megakernel)** | `\$2.70` | **`150 RPS`** | **`55.56 RPS/\$`** | **`0.97x (~Parity with L4)`** | `+2.8% Cost / Req vs L4` | **`60.0 RPS`** | **`17`** | **`\$33,507 / mo`** (`\$32,850` exact) | **`Near-Parity with L4 (3.7x fewer nodes: 17 vs 63)`** |
+
+> [!NOTE]
+> **Key TCO Takeaways Under `L4 = $0.70/hr`, `TPU v5e = $1.20/hr`, `TPU v6e = $2.70/hr`**:
+> 1. **Cloud TPU v5e (`\$1.20/hr`) is the Price-Performance / TCO Leader**: Delivers **`1.50x` (`+50.0%`) higher `RPS/\$` on `1KB`** (`150.0` vs `100.0 RPS/\$/hr`, **`-33.3%` lower monthly TCO**) and **`1.31x` (`+31.3%`) higher `RPS/\$` on `2KB`** (`75.0` vs `57.14 RPS/\$/hr`, **`-23.8%` lower monthly TCO**) compared to NVIDIA L4 (`\$0.70/hr`).
+> 2. **Cloud TPU v6e (`\$2.70/hr`) with the 4-Layer Fused `FP32` Megakernel Achieves Full Cost Parity with L4 While Delivering `3.75x–3.86x` Higher Density**:
+>    - Even though TPU v6e costs **`3.86x` more per hour than L4 (`\$2.70` vs `\$0.70`)**, the 2048-capped Megakernel delivers **`3.86x` the `1KB` throughput (`270 RPS` vs `70 RPS`)** and **`3.75x` the `2KB` throughput (`150 RPS` vs `40 RPS`)** — resulting in **exact `100.00 RPS/\$/hr` cost parity on `1KB`** and **`97.2%` cost parity (`55.56` vs `57.14 RPS/\$/hr`) on `2KB`**, while shrinking a `1,000 RPS` (`@40%` utilization) fleet from **`36–63` L4 GPUs down to just `10–17` TPU v6e chips** and cutting `P50`/`P99` latency by **`43%–56%`**.
+>    - Compared to TPU v5e (`\$1.20/hr`), TPU v6e (`\$2.70/hr`) costs `2.25x` more per hour while delivering `1.50x` (`1KB`) to `1.67x` (`2KB`) more `FP32` throughput per chip, making **TPU v5e optimal for pure TCO minimization** and **TPU v6e optimal when maximizing per-chip throughput density, minimizing tail latency, or deploying in `v6e`-rich regions (`us-east5`, `us-south1`)**.

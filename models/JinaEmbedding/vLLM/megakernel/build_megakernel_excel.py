@@ -1,19 +1,10 @@
 #!/usr/bin/env python3
 """Generates the Excel (.xlsx) and CSV comparison workbooks for TPU v6e FP32 Megakernel
-tested on `jina-v2-embeddings-clean` (`max_model_len = 2048` ONLY, `max_num_batched_tokens = 2048`).
-
-Includes:
-1. Tab 1 (`TPU_v6e_Megakernel_gid1161755388`):
-   Matches Zhemin's `gid=1161755388` tab AS-IS:
-   - Batch Request Testing (`1KB` & `2KB`, Concurrency `1, 4, 8, 16`)
-   - 1KB Dedicated Saturation (`100` to `290` RPS, saturating at `270 RPS` `< 50 ms` P99)
-   - 2KB Dedicated Saturation (`90` to `160` RPS, saturating at `150 RPS` `< 50 ms` P99)
-2. Tab 2 (`TPU_vs_L4_Comparison_gid1972899730`):
-   Matches Zhemin's `gid=1972899730` tab AS-IS (for `1KB` & `2KB` tiers):
-   - Concurrent Request Latency Comparison (L4 vs TPU v5e vs TPU v6e Megakernel)
-   - RPS Saturation Result (`< 50 ms` P99 SLA)
-   - Cost Improvement (Performance/$ & Monthly TCO at 100% and 40% Fleet Utilization)
-   - Regional Availability
+tested on `jina-v2-embeddings-clean` (`max_model_len = 2048` ONLY, `max_num_batched_tokens = 2048`)
+using the exact On-Demand (OD) hourly prices:
+  - NVIDIA L4:     $0.70 / hr
+  - Cloud TPU v5e: $1.20 / hr
+  - Cloud TPU v6e: $2.70 / hr
 """
 
 import csv
@@ -25,7 +16,6 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
 BATCH_TESTING_ROWS = [
-    # (Payload Size, Concurrency, v6e_tput, v6e_p50, v6e_p99, v5e_tput, v5e_p50, v5e_p99, l4_tput, l4_p50, l4_p99)
     ("1KB (1024 chars)", 1, "109.5/s", "9.0ms", "11.4ms", "85.8/s", "11.5ms", "12.7ms", "43.2/s", "20.7ms", "23.5ms"),
     ("1KB (1024 chars)", 4, "196.3/s", "20.5ms", "23.9ms", "187.4/s", "21.2ms", "22.8ms", "103.4/s", "38.1ms", "42.9ms"),
     ("1KB (1024 chars)", 8, "252.4/s", "31.4ms", "37.5ms", "187.6/s", "42.5ms", "44.5ms", "135.1/s", "58.7ms", "66.3ms"),
@@ -37,7 +27,6 @@ BATCH_TESTING_ROWS = [
 ]
 
 SATURATION_1KB_ROWS = [
-    # (RPS, v6e_ach, v6e_p50, v6e_p99, v6e_sla, v5e_ach, v5e_p50, v5e_p99, v5e_sla)
     (100, "99.97", "11.5 ms", "13.6 ms", "✅ PASS", "100", "11.5 ms", "14.0 ms", "✅ PASS"),
     (120, "119.96", "12.2 ms", "15.0 ms", "✅ PASS", "120", "11.8 ms", "15.5 ms", "✅ PASS"),
     (140, "139.92", "13.1 ms", "15.1 ms", "✅ PASS", "140", "11.6 ms", "18.5 ms", "✅ PASS"),
@@ -67,7 +56,6 @@ SATURATION_2KB_ROWS = [
 ]
 
 CONCURRENT_COMPARISON_ROWS = [
-    # (Category, L4_p50, v5e_p50, v6e_p50, v6e_vs_l4_p50, v6e_vs_v5e_p50, L4_p99, v5e_p99, v6e_p99, v6e_vs_l4_p99, v6e_vs_v5e_p99)
     ("1KB (1024 chars ≈ 1,009 tokens) @ C=1", 20.7, 11.5, 9.0, "-56.5%", "-21.7%", 23.5, 12.7, 11.4, "-51.5%", "-10.2%"),
     ("2KB (2048 chars ≈ 2,016 tokens) @ C=1", 24.3, 16.5, 11.3, "-53.5%", "-31.5%", 28.2, 17.7, 13.0, "-53.9%", "-26.6%"),
     ("1KB (1024 chars ≈ 1,009 tokens) @ C=4", 38.1, 21.2, 20.5, "-46.2%", "-3.3%", 42.9, 22.8, 23.9, "-44.3%", "+4.8%"),
@@ -77,19 +65,91 @@ CONCURRENT_COMPARISON_ROWS = [
 ]
 
 RPS_SATURATION_SUMMARY_ROWS = [
-    # (Payload, L4_RPS, v5e_RPS, v6e_RPS, v6e_P50, v6e_P99, v6e_vs_L4, v6e_vs_v5e)
     ("1KB (1,024 chars ≈ 1,009 tokens)", "70 RPS", "180 RPS", "270 RPS", "19.0 ms", "28.3 ms", "3.86x (+285.7%)", "1.50x (+50.0%)"),
     ("2KB (2,048 chars ≈ 2,016 tokens)", "40 RPS", "90 RPS", "150 RPS", "13.9 ms", "31.1 ms", "3.75x (+275.0%)", "1.67x (+66.7%)"),
 ]
 
+# Revised TCO Analysis using exact OD prices: L4 = $0.70/hr, TPU v5e = $1.20/hr, TPU v6e = $2.70/hr
 COST_IMPROVEMENT_ROWS = [
-    # (Payload, Platform, Hourly, Max_RPS_100, Perf_Per_Dollar_100, Rel_Perf_Dollar, Fleet_RPS_40, Nodes_for_1000RPS_40, Monthly_TCO_1000RPS_40, TCO_Savings_vs_L4)
-    ("1KB (1,024 chars)", "NVIDIA L4 (g2-standard-8)", "$1.0124", "70 RPS", "69.14 RPS/$", "1.00x (Baseline)", "28.0 RPS", 36, "$26,606 / mo", "Baseline"),
-    ("1KB (1,024 chars)", "TPU v5e-1 (ct5lp-hightpu-1t, FP32)", "$0.7990", "180 RPS", "225.28 RPS/$", "3.26x (+225.8%)", "72.0 RPS", 14, "$8,166 / mo", "-69.3% ($18,440/mo saved)"),
-    ("1KB (1,024 chars)", "TPU v6e-1 (ct6e-standard-1t, FP32 Megakernel, max_len=2048)", "$0.9990", "270 RPS", "270.27 RPS/$", "3.91x (+290.9%)", "108.0 RPS", 10, "$7,293 / mo", "-72.6% ($19,313/mo saved)"),
-    ("2KB (2,048 chars)", "NVIDIA L4 (g2-standard-8)", "$1.0124", "40 RPS", "39.51 RPS/$", "1.00x (Baseline)", "16.0 RPS", 63, "$46,560 / mo", "Baseline"),
-    ("2KB (2,048 chars)", "TPU v5e-1 (ct5lp-hightpu-1t, FP32)", "$0.7990", "90 RPS", "112.64 RPS/$", "2.85x (+185.1%)", "36.0 RPS", 28, "$16,332 / mo", "-64.9% ($30,228/mo saved)"),
-    ("2KB (2,048 chars)", "TPU v6e-1 (ct6e-standard-1t, FP32 Megakernel, max_len=2048)", "$0.9990", "150 RPS", "150.15 RPS/$", "3.80x (+280.0%)", "60.0 RPS", 17, "$12,398 / mo", "-73.4% ($34,162/mo saved)"),
+    # (Payload, Platform, OD_Price, Max_RPS_100, Perf_Per_Dollar_100, Rel_Perf_Dollar_vs_L4, Cost_Delta_vs_L4, Fleet_RPS_40, Nodes_for_1000RPS_40, Monthly_TCO_1000RPS_40, TCO_vs_L4)
+    (
+        "1KB (1,024 chars)",
+        "NVIDIA L4",
+        "$0.70",
+        "70 RPS",
+        "100.00 RPS/$",
+        "1.00x (Baseline)",
+        "Baseline",
+        "28.0 RPS",
+        36,
+        "$18,396 / mo ($18,250 exact)",
+        "Baseline (36 GPUs)",
+    ),
+    (
+        "1KB (1,024 chars)",
+        "Cloud TPU v5e (FP32)",
+        "$1.20",
+        "180 RPS",
+        "150.00 RPS/$",
+        "1.50x (+50.0%)",
+        "-33.3% Cost / Req",
+        "72.0 RPS",
+        14,
+        "$12,264 / mo ($12,167 exact)",
+        "-33.3% ($6,132/mo saved, 14 chips)",
+    ),
+    (
+        "1KB (1,024 chars)",
+        "Cloud TPU v6e (FP32 Megakernel, max_len=2048)",
+        "$2.70",
+        "270 RPS",
+        "100.00 RPS/$",
+        "1.00x (Parity with L4)",
+        "0.0% (Exact Cost Parity with L4)",
+        "108.0 RPS",
+        10,
+        "$19,710 / mo ($18,250 exact)",
+        "Cost Parity with L4 (3.6x fewer nodes: 10 vs 36)",
+    ),
+    (
+        "2KB (2,048 chars)",
+        "NVIDIA L4",
+        "$0.70",
+        "40 RPS",
+        "57.14 RPS/$",
+        "1.00x (Baseline)",
+        "Baseline",
+        "16.0 RPS",
+        63,
+        "$32,193 / mo ($31,938 exact)",
+        "Baseline (63 GPUs)",
+    ),
+    (
+        "2KB (2,048 chars)",
+        "Cloud TPU v5e (FP32)",
+        "$1.20",
+        "90 RPS",
+        "75.00 RPS/$",
+        "1.31x (+31.3%)",
+        "-23.8% Cost / Req",
+        "36.0 RPS",
+        28,
+        "$24,528 / mo ($24,333 exact)",
+        "-23.8% ($7,665/mo saved, 28 chips)",
+    ),
+    (
+        "2KB (2,048 chars)",
+        "Cloud TPU v6e (FP32 Megakernel, max_len=2048)",
+        "$2.70",
+        "150 RPS",
+        "55.56 RPS/$",
+        "0.97x (~Parity with L4)",
+        "+2.8% Cost / Req vs L4",
+        "60.0 RPS",
+        17,
+        "$33,507 / mo ($32,850 exact)",
+        "Near-Parity with L4 (3.7x fewer nodes: 17 vs 63)",
+    ),
 ]
 
 
@@ -113,7 +173,7 @@ def style_sheet(ws):
                 if cell.row in (1,):
                     cell.fill = header_fill
                     cell.font = header_font
-                elif val_str.startswith("SECTION") or val_str.startswith("1.") or val_str.startswith("2.") or val_str.startswith("3.") or val_str.startswith("4."):
+                elif val_str.startswith("1.") or val_str.startswith("2.") or val_str.startswith("3.") or val_str.startswith("4."):
                     cell.fill = sub_fill
                     cell.font = sub_font
                 elif val_str in ("Payload Size", "RPS", "Payload Category", "Platform"):
@@ -174,7 +234,7 @@ def build_tab1_gid1161755388(ws):
 
 
 def build_tab2_gid1972899730(ws):
-    ws.append(["TPU v6e FP32 Megakernel (Branch: jina-v2-embeddings-clean | Strictly max_model_len=2048) vs TPU v5e & NVIDIA L4 — Matching Zhemin gid=1972899730"])
+    ws.append(["TPU v6e FP32 Megakernel ($2.70/hr) vs TPU v5e ($1.20/hr) & NVIDIA L4 ($0.70/hr) — Matching Zhemin gid=1972899730"])
     ws.append([])
     ws.append(["1. Concurrent Request Latency Comparison (1KB & 2KB Random Characters)"])
     ws.append([
@@ -195,12 +255,12 @@ def build_tab2_gid1972899730(ws):
         ws.append(list(r))
 
     ws.append([])
-    ws.append(["3. Cost Improvement & Fleet TCO Analysis (100% Max Capacity & 40% Production Fleet Utilization)"])
+    ws.append(["3. Cost Improvement & Fleet TCO Analysis (OD Pricing: L4 = $0.70/hr, TPU v5e = $1.20/hr, TPU v6e = $2.70/hr)"])
     ws.append([
         "Payload Size", "Platform", "On-Demand Price ($/hr)", "Max Validated RPS (<50ms P99)",
-        "Throughput per Dollar (RPS/$/hr)", "Relative Perf/$ vs L4",
+        "Throughput per Dollar (RPS/$/hr)", "Relative Perf/$ vs L4", "Cost per Request vs L4",
         "Effective RPS @ 40% Fleet Util", "Chips Needed for 1,000 RPS (@40% Util)",
-        "Monthly Fleet Cost (1,000 RPS @ 40% Util)", "Monthly TCO Savings vs L4"
+        "Monthly Fleet Cost (1,000 RPS @ 40% Util)", "Fleet TCO Summary vs L4"
     ])
     for r in COST_IMPROVEMENT_ROWS:
         ws.append(list(r))
@@ -244,6 +304,7 @@ def main():
         "max_num_batched_tokens": 2048,
         "truncate_prompt_tokens": 2048,
         "dtype": "float32",
+        "pricing_od_usd_per_hr": {"L4": 0.70, "TPU_v5e": 1.20, "TPU_v6e": 2.70},
         "batch_request_testing": BATCH_TESTING_ROWS,
         "saturation_1kb": SATURATION_1KB_ROWS,
         "saturation_2kb": SATURATION_2KB_ROWS,

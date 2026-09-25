@@ -5,6 +5,11 @@
   "max_num_batched_tokens": 2048,
   "truncate_prompt_tokens": 2048,
   "dtype": "float32",
+  "pricing_od_usd_per_hr": {
+    "L4": 0.7,
+    "TPU_v5e": 1.2,
+    "TPU_v6e": 2.7
+  },
   "batch_request_testing": [
     [
       "1KB (1024 chars)",
@@ -473,75 +478,81 @@
   "cost_improvement": [
     [
       "1KB (1,024 chars)",
-      "NVIDIA L4 (g2-standard-8)",
-      "$1.0124",
+      "NVIDIA L4",
+      "$0.70",
       "70 RPS",
-      "69.14 RPS/$",
+      "100.00 RPS/$",
       "1.00x (Baseline)",
+      "Baseline",
       "28.0 RPS",
       36,
-      "$26,606 / mo",
-      "Baseline"
+      "$18,396 / mo ($18,250 exact)",
+      "Baseline (36 GPUs)"
     ],
     [
       "1KB (1,024 chars)",
-      "TPU v5e-1 (ct5lp-hightpu-1t, FP32)",
-      "$0.7990",
+      "Cloud TPU v5e (FP32)",
+      "$1.20",
       "180 RPS",
-      "225.28 RPS/$",
-      "3.26x (+225.8%)",
+      "150.00 RPS/$",
+      "1.50x (+50.0%)",
+      "-33.3% Cost / Req",
       "72.0 RPS",
       14,
-      "$8,166 / mo",
-      "-69.3% ($18,440/mo saved)"
+      "$12,264 / mo ($12,167 exact)",
+      "-33.3% ($6,132/mo saved, 14 chips)"
     ],
     [
       "1KB (1,024 chars)",
-      "TPU v6e-1 (ct6e-standard-1t, FP32 Megakernel, max_len=2048)",
-      "$0.9990",
+      "Cloud TPU v6e (FP32 Megakernel, max_len=2048)",
+      "$2.70",
       "270 RPS",
-      "270.27 RPS/$",
-      "3.91x (+290.9%)",
+      "100.00 RPS/$",
+      "1.00x (Parity with L4)",
+      "0.0% (Exact Cost Parity with L4)",
       "108.0 RPS",
       10,
-      "$7,293 / mo",
-      "-72.6% ($19,313/mo saved)"
+      "$19,710 / mo ($18,250 exact)",
+      "Cost Parity with L4 (3.6x fewer nodes: 10 vs 36)"
     ],
     [
       "2KB (2,048 chars)",
-      "NVIDIA L4 (g2-standard-8)",
-      "$1.0124",
+      "NVIDIA L4",
+      "$0.70",
       "40 RPS",
-      "39.51 RPS/$",
+      "57.14 RPS/$",
       "1.00x (Baseline)",
+      "Baseline",
       "16.0 RPS",
       63,
-      "$46,560 / mo",
-      "Baseline"
+      "$32,193 / mo ($31,938 exact)",
+      "Baseline (63 GPUs)"
     ],
     [
       "2KB (2,048 chars)",
-      "TPU v5e-1 (ct5lp-hightpu-1t, FP32)",
-      "$0.7990",
+      "Cloud TPU v5e (FP32)",
+      "$1.20",
       "90 RPS",
-      "112.64 RPS/$",
-      "2.85x (+185.1%)",
+      "75.00 RPS/$",
+      "1.31x (+31.3%)",
+      "-23.8% Cost / Req",
       "36.0 RPS",
       28,
-      "$16,332 / mo",
-      "-64.9% ($30,228/mo saved)"
+      "$24,528 / mo ($24,333 exact)",
+      "-23.8% ($7,665/mo saved, 28 chips)"
     ],
     [
       "2KB (2,048 chars)",
-      "TPU v6e-1 (ct6e-standard-1t, FP32 Megakernel, max_len=2048)",
-      "$0.9990",
+      "Cloud TPU v6e (FP32 Megakernel, max_len=2048)",
+      "$2.70",
       "150 RPS",
-      "150.15 RPS/$",
-      "3.80x (+280.0%)",
+      "55.56 RPS/$",
+      "0.97x (~Parity with L4)",
+      "+2.8% Cost / Req vs L4",
       "60.0 RPS",
       17,
-      "$12,398 / mo",
-      "-73.4% ($34,162/mo saved)"
+      "$33,507 / mo ($32,850 exact)",
+      "Near-Parity with L4 (3.7x fewer nodes: 17 vs 63)"
     ]
   ]
 }
