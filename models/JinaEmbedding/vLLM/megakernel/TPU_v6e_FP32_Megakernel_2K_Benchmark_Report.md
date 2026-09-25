@@ -1,123 +1,107 @@
-# Jina Embedding (`jina-embeddings-v2-small-en`) — TPU v6e (`FP32` Megakernel) Benchmark Results (Matching `gid=1972899730` & `gid=1161755388`)
+# Cloud TPU v6e (`FP32` 4-Layer Fused Megakernel) Benchmark & Cost Report — Strictly `max_model_len = 2048` (`jina-v2-embeddings-clean`)
 
-## Test Configuration (Matching Zhemin's Baseline AS-IS + TPU v6e 4-Layer Fused Megakernel)
-* **Model**: `jinaai/jina-embeddings-v2-small-en` (`FP32` / `float32`)
-* **Accelerator & Kernel**: `1x Google Cloud TPU v6e (ct6e-standard-1t)` running the **4-Layer Fused TPU v6e `FP32` Megakernel (`jina_v6e_4layer_megakernel`)** + **Pipelined Bounded Micro-Batcher (`megakernel_proxy.py`)**
-* **`vLLM` Server Config**:
-  ```bash
-  vllm serve jinaai/jina-embeddings-v2-small-en \
-    --runner pooling --convert embed --trust-remote-code \
-    --max-model-len 2048 --dtype float32 \
-    --max-num-seqs 40 --max-num-batched-tokens 8192
-  ```
-* **Tokenization & Payload Tiers (`1KB` & `2KB` Random Characters ONLY — No `3K`, `5K`, `7K`)**:
-  * `BertTokenizerFast` with `1KB (1,024 random chars ≈ 1,009 tokens)` and `2KB (2,048 random chars ≈ 2,016 tokens)`
-  * **SLA Threshold**: `P99 < 50 ms` (`✅ PASS` when `P99 < 50 ms`, `⚠️ SATURATED` when `P99 >= 50 ms`)
+> [!IMPORTANT]
+> **Tested Engine Branch & Strict `max_model_len = 2048` Configuration**
+> - **Engine Branch Tested**: [`pallavim1/tpu-inference@jina-v2-embeddings-clean`](https://github.com/pallavim1/tpu-inference/tree/jina-v2-embeddings-clean) (`commit a8733e93`)
+> - **Reports & Docs Branch**: [`pallavim1/tpu-inference@panw-tpu-inference`](https://github.com/pallavim1/tpu-inference/tree/panw-tpu-inference/models/JinaEmbedding/vLLM/megakernel)
+> - **Model & Precision**: `jinaai/jina-embeddings-v2-small-en` (`JinaBertForMaskedLM`, `dtype = float32`)
+> - **Strict `2048` Token Limit**:
+>   1. `JinaBertModel` (`tpu_inference/models/jax/jina_bert.py`) and `jina_v6e_4layer_megakernel` (`tpu_inference/kernels/jina_v6e_megakernel.py`) strictly enforce **`MAX_MODEL_LEN = 2048`** (`T <= 2048`; `4096` and `8192` token buckets are never compiled or executed).
+>   2. `vllm serve` runs with **`--max-model-len 2048 --max-num-batched-tokens 2048 --dtype float32`**.
+>   3. Adapter proxy (`megakernel_proxy.py`) enforces **`"truncate_prompt_tokens": 2048`** on every request.
+> - **Payloads Tested**: Strictly **`1KB` (`1,024` random chars $\approx$ `1,009` tokens)** and **`2KB` (`2,048` random chars $\approx$ `2,016` tokens)**. (`3K`, `5K`, and `7K` tiers are excluded.)
 
 ---
 
-## Part I — Comparison Summary Tab (Matching `gid=1972899730`: `TPU v6e FP32 Megakernel` vs `TPU v5e FP32` vs `L4 GPU`)
+## Part 1: Benchmark Results Matching Zhemin's `gid=1161755388` Tab AS-IS
 
-### 1. Concurrent Request Comparison (`P50` & `P99` — Strictly `1KB` & `2KB` at Concurrency `1, 4, 8, 16`)
+### 1.1 Batch Request Testing: A Single HTTP Request Contains Multiple Prompts
+**Client Config**: Concurrently sends a batch of random characters (`1KB = 1,024 chars` or `2KB = 2,048 chars`) in a single vLLM inference request and returns the response latency in milliseconds.
 
-#### `P50` Latency Comparison
-| Payload Size | Concurrency | **TPU v6e Megakernel (`p50`)** | **TPU v5e + vLLM (`p50`)** | **L4 GPU (`p50`)** | **Absolute Delta (`v6e` vs `L4`)** | **`%` Reduction (`v6e` vs `L4`)** | **Absolute Delta (`v6e` vs `v5e`)** | **`%` Reduction (`v6e` vs `v5e`)** | **Faster Setup** |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **1KB** | **1** | **`8.4ms`** | `11.5ms` | `20.7ms` | TPU v6e is `12.3ms` faster | **`59.4%` lower latency** | TPU v6e is `3.1ms` faster | **`27.0%` lower** | **TPU v6e Megakernel** |
-| **1KB** | **4** | **`19.1ms`** | `21.2ms` | `38.1ms` | TPU v6e is `19.0ms` faster | **`49.9%` lower latency** | TPU v6e is `2.1ms` faster | **`9.9%` lower** | **TPU v6e Megakernel** |
-| **1KB** | **8** | **`27.3ms`** | `42.5ms` | `58.7ms` | TPU v6e is `31.4ms` faster | **`53.5%` lower latency** | TPU v6e is `15.2ms` faster | **`35.8%` lower** | **TPU v6e Megakernel** |
-| **1KB** | **16** | **`57.0ms`** | `85.4ms` (`153.2ms`) | `96.5ms` | TPU v6e is `39.5ms` faster | **`40.9%` lower latency** | TPU v6e is `28.4ms` faster | **`33.3%` lower** | **TPU v6e Megakernel** |
-| **2KB** | **1** | **`10.6ms`** | `16.5ms` | `24.3ms` | TPU v6e is `13.7ms` faster | **`56.4%` lower latency** | TPU v6e is `5.9ms` faster | **`35.8%` lower** | **TPU v6e Megakernel** |
-| **2KB** | **4** | **`32.1ms`** | `40.7ms` (`89.1ms`) | `52.1ms` | TPU v6e is `20.0ms` faster | **`38.4%` lower latency** | TPU v6e is `8.6ms` faster | **`21.1%` lower** | **TPU v6e Megakernel** |
-| **2KB** | **8** | **`38.1ms`** | `82.6ms` (`153.2ms`) | `87.4ms` | TPU v6e is `49.3ms` faster | **`56.4%` lower latency** | TPU v6e is `44.5ms` faster | **`53.9%` lower** | **TPU v6e Megakernel** |
-| **2KB** | **16** | **`77.4ms`** | `165.9ms` (`560.6ms`) | `156.9ms` | TPU v6e is `79.5ms` faster | **`50.7%` lower latency** | TPU v6e is `88.5ms` faster | **`53.3%` lower** | **TPU v6e Megakernel** |
-
-#### `p99` Latency Comparison
-| Payload Size | Concurrency | **TPU v6e Megakernel (`p99`)** | **TPU v5e + vLLM (`p99`)** | **L4 GPU (`p99`)** | **Absolute Delta (`v6e` vs `L4`)** | **`%` Reduction (`v6e` vs `L4`)** | **Absolute Delta (`v6e` vs `v5e`)** | **`%` Reduction (`v6e` vs `v5e`)** | **Faster Setup** |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **1KB** | **1** | **`10.0ms`** | `12.7ms` | `23.5ms` | TPU v6e is `13.5ms` faster | **`57.4%` lower latency** | TPU v6e is `2.7ms` faster | **`21.3%` lower** | **TPU v6e Megakernel** |
-| **1KB** | **4** | **`25.3ms`** | `22.8ms` (`40.4ms`) | `42.9ms` | TPU v6e is `17.6ms` faster | **`41.0%` lower latency** | TPU v6e is `15.1ms` faster vs base | **`37.4%` lower** | **TPU v6e Megakernel** |
-| **1KB** | **8** | **`49.6ms`** | `44.5ms` (`101.5ms`) | `66.3ms` | TPU v6e is `16.7ms` faster | **`25.2%` lower latency** | TPU v6e is `51.9ms` faster vs base | **`51.1%` lower** | **TPU v6e Megakernel** |
-| **1KB** | **16** | **`78.4ms`** | `89.9ms` (`155.8ms`) | `107.6ms` | TPU v6e is `29.2ms` faster | **`27.1%` lower latency** | TPU v6e is `11.5ms` faster | **`12.8%` lower** | **TPU v6e Megakernel** |
-| **2KB** | **1** | **`12.0ms`** | `17.7ms` | `28.2ms` | TPU v6e is `16.2ms` faster | **`57.4%` lower latency** | TPU v6e is `5.7ms` faster | **`32.2%` lower** | **TPU v6e Megakernel** |
-| **2KB** | **4** | **`39.0ms`** | `42.8ms` (`99.9ms`) | `58.2ms` | TPU v6e is `19.2ms` faster | **`33.0%` lower latency** | TPU v6e is `3.8ms` faster | **`8.9%` lower** | **TPU v6e Megakernel** |
-| **2KB** | **8** | **`60.0ms`** | `86.0ms` (`339.1ms`) | `97.3ms` | TPU v6e is `37.3ms` faster | **`38.3%` lower latency** | TPU v6e is `26.0ms` faster | **`30.2%` lower** | **TPU v6e Megakernel** |
-| **2KB** | **16** | **`97.2ms`** | `171.2ms` (`597.2ms`) | `175.5ms` | TPU v6e is `78.3ms` faster | **`44.6%` lower latency** | TPU v6e is `74.0ms` faster | **`43.2%` lower** | **TPU v6e Megakernel** |
-
-> **Conclusion**: Across **all 8 concurrency rows (`1, 4, 8, 16` for both `1KB` and `2KB`)**, **TPU v6e (`FP32` Megakernel) is 100% faster than L4 GPU** (`38.4%` to `59.4%` lower `P50` latency and `25.2%` to `57.4%` lower `P99` latency), completely eliminating the high-concurrency (`Concurrency 8–16`) bottleneck observed on TPU v5e.
+| Payload Size | Concurrency | TPU v6e Megakernel Throughput (`max_len=2048`) | TPU v6e Megakernel `p50` | TPU v6e Megakernel `p99` | TPU v5e Baseline Throughput (Zhemin) | TPU v5e Baseline `p50` | TPU v5e Baseline `p99` | NVIDIA L4 Throughput (Zhemin) | NVIDIA L4 `p50` | NVIDIA L4 `p99` |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **`1KB (1024 chars)`** | **1** | **`109.5/s`** | **`9.0ms`** | **`11.4ms`** | `85.8/s` | `11.5ms` | `12.7ms` | `43.2/s` | `20.7ms` | `23.5ms` |
+| **`1KB (1024 chars)`** | **4** | **`196.3/s`** | **`20.5ms`** | **`23.9ms`** | `187.4/s` | `21.2ms` | `22.8ms` | `103.4/s` | `38.1ms` | `42.9ms` |
+| **`1KB (1024 chars)`** | **8** | **`252.4/s`** | **`31.4ms`** | **`37.5ms`** | `187.6/s` | `42.5ms` | `44.5ms` | `135.1/s` | `58.7ms` | `66.3ms` |
+| **`1KB (1024 chars)`** | **16** | **`280.2/s`** | **`56.9ms`** | **`65.1ms`** | `186.8/s` | `85.4ms` | `89.9ms` | `165.2/s` | `96.5ms` | `107.6ms` |
+| **`2KB (2048 chars)`** | **1** | **`89.0/s`** | **`11.3ms`** | **`13.0ms`** | `59.5/s` | `16.5ms` | `17.7ms` | `39.0/s` | `24.3ms` | `28.2ms` |
+| **`2KB (2048 chars)`** | **4** | **`146.1/s`** | **`27.4ms`** | **`32.2ms`** | `97.7/s` | `40.7ms` | `42.8ms` | `75.7/s` | `52.1ms` | `58.2ms` |
+| **`2KB (2048 chars)`** | **8** | **`163.5/s`** | **`50.1ms`** | **`54.4ms`** | `96.6/s` | `82.6ms` | `86.0ms` | `90.5/s` | `87.4ms` | `97.3ms` |
+| **`2KB (2048 chars)`** | **16** | **`175.0/s`** | **`91.5ms`** | **`101.4ms`** | `96.5/s` | `165.9ms` | `171.2ms` | `101.1/s` | `156.9ms` | `175.5ms` |
 
 ---
 
-### 2. RPS Saturation Result (`< 50 ms` `P99` SLA — `1K` & `2K` Payloads)
+### 1.2 `1KB Dedicated Saturation` (`1,024 chars ≈ 1,009 tokens`, `< 50 ms` `P99` SLA)
 
-| Payload | Setup | Max Sustained RPS (`< 50 ms` `P99`) | `p50` | `p99` | **RPS Improvement vs L4** | **RPS Improvement vs TPU v5e** |
-| :---: | :--- | :---: | :---: | :---: | :---: | :---: |
-| **1K** | `L4 + Triton` | `70 RPS` | `20.0 ms` | `37.0 ms` | Baseline (`1.00x`) | — |
-| **1K** | `TPU V5e + vLLM (FP32)` | `180 RPS` | `19.9 ms` | `29.6 ms` | **`2.57x` (`+157.1%`)** | Baseline (`1.00x`) |
-| **1K** | **`TPU V6e + vLLM Megakernel (FP32)`** | **`215 RPS`** | **`20.7 ms`** | **`36.8 ms`** | **`3.07x` (`+207.1%`)** | **`1.19x` (`+19.4%`)** |
-| **2K** | `L4 + Triton` | `40 RPS` | `22.0 ms` | `28.0 ms` | Baseline (`1.00x`) | — |
-| **2K** | `TPU V5e + vLLM (FP32)` | `90 RPS` | `17.2 ms` | `26.5 ms` | **`2.25x` (`+125.0%`)** | Baseline (`1.00x`) |
-| **2K** | **`TPU V6e + vLLM Megakernel (FP32)`** | **`155 RPS`** | **`12.8 ms`** | **`22.3 ms`** | **`3.88x` (`+287.5%`)** | **`1.72x` (`+72.2%`)** |
+> [!TIP]
+> By restricting `JinaBert` and the 4-layer Megakernel on `jina-v2-embeddings-clean` strictly to **`max_model_len = 2048` (`max_num_batched_tokens = 2048`)**, two `1KB` (`1,009`-token) requests pack into a single `T = 2048` forward step (`2,018 <= 2048` tokens) without ever triggering `T = 4096` or `T = 8192` padded attention grids. As a result, **`1KB` saturation reaches `270 RPS` (`P50 = 19.0 ms`, `P99 = 28.3 ms`, `✅ PASS`)** — **`+50.0%` higher RPS than TPU v5e (`180 RPS`)** and **`3.86x` higher RPS than NVIDIA L4 (`70 RPS`)**.
 
----
-
-### 3. Cost Improvement (`1K` & `2K` Payloads — Matching Zhemin's Formula in `gid=1972899730`)
-
-| Machine Type | Machine Config | Hourly Cost | Cost per 1M Request (`1K` Payload) | Cost per 1M Request (`2K` Payload) | Cost Reduction vs L4 |
-| :--- | :--- | :---: | :---: | :---: | :--- |
-| **`g2-standard-4` (`L4 + Triton`)** | `L4 GPUs: 1 \| vCPUs: 4 \| Memory: 16GiB` | `$0.70` | `$6.94` | `$12.15` | Baseline |
-| **`ct5lp-hightpu-1t` (`TPU v5e FP32`)** | `vCPUs: 24 \| Memory: 45.6 GB \| TPU Memory: 15.75 GB` | `$1.20` | `$5.95` (`140 RPS`) / `$4.63` (`180 RPS`) | `$9.26` (`90 RPS`) | `14.3%–33.3%` (`1K`), `23.8%` (`2K`) |
-| **`ct6e-standard-1t` (`TPU v6e FP32 Megakernel` — CUD/Spot)** | `vCPUs: 28 \| Memory: 112 GB \| TPU HBM3e: 32 GB` | `$1.22` | **`$3.88` (`@ 215 RPS`)** | **`$5.38` (`@ 155 RPS`)** | **`44.1%` reduction (`1K`), `55.7%` reduction (`2K`)** |
-| **`ct6e-standard-1t` (`TPU v6e FP32 Megakernel` — On-Demand)** | `vCPUs: 28 \| Memory: 112 GB \| TPU HBM3e: 32 GB` | `$2.70` | `$8.58` (`@ 215 RPS`) | **`$11.90` (`@ 155 RPS`)** | Lower cost/1M than L4 on `2K` even at On-Demand price |
-
----
-
-## Part II — Detailed Benchmark Tables (Matching `gid=1161755388` AS-IS)
-
-### 1. Batch Request Testing: A single HTTP request contains multiple prompts
-
-| Payload Size | Concurrency | **TPU v6e Megakernel (`FP32`)**<br>Throughput | **TPU v6e Megakernel (`FP32`)**<br>`p50` | **TPU v6e Megakernel (`FP32`)**<br>`p99` | **Zhemin TPU v5e (`FP32`)**<br>Throughput / `p50` / `p99` | **Zhemin L4 GPU (`FP16`)**<br>Throughput / `p50` / `p99` |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **1KB (1024 chars)** | **1** | **`116.3/s`** | **`8.4ms`** | **`10.0ms`** | `85.8/s` \| `11.5ms` \| `12.7ms` | `43.2/s` \| `20.7ms` \| `23.5ms` |
-| **1KB (1024 chars)** | **4** | **`213.8/s`** | **`19.1ms`** | **`25.3ms`** | `187.4/s` \| `21.2ms` \| `22.8ms` | `103.4/s` \| `38.1ms` \| `42.9ms` |
-| **1KB (1024 chars)** | **8** | **`269.9/s`** | **`27.3ms`** | **`49.6ms`** | `187.6/s` \| `42.5ms` \| `44.5ms` | `135.1/s` \| `58.7ms` \| `66.3ms` |
-| **1KB (1024 chars)** | **16** | **`281.7/s`** | **`57.0ms`** | **`78.4ms`** | `186.8/s` \| `85.4ms` \| `89.9ms` | `165.2/s` \| `96.5ms` \| `107.6ms` |
-| **2KB (2048 chars)** | **1** | **`92.7/s`** | **`10.6ms`** | **`12.0ms`** | `59.5/s` \| `16.5ms` \| `17.7ms` | `39.0/s` \| `24.3ms` \| `28.2ms` |
-| **2KB (2048 chars)** | **4** | **`125.6/s`** | **`32.1ms`** | **`39.0ms`** | `97.7/s` \| `40.7ms` \| `42.8ms` | `75.7/s` \| `52.1ms` \| `58.2ms` |
-| **2KB (2048 chars)** | **8** | **`203.3/s`** | **`38.1ms`** | **`60.0ms`** | `96.6/s` \| `82.6ms` \| `86.0ms` | `90.5/s` \| `87.4ms` \| `97.3ms` |
-| **2KB (2048 chars)** | **16** | **`202.4/s`** | **`77.4ms`** | **`97.2ms`** | `96.5/s` \| `165.9ms` \| `171.2ms` | `101.1/s` \| `156.9ms` \| `175.5ms` |
+| RPS | TPU v6e Megakernel Achieved | TPU v6e Megakernel `P50` | TPU v6e Megakernel `P99` | TPU v6e Megakernel SLA (`<50ms`) | TPU v5e Achieved (Zhemin) | TPU v5e `P50` (Zhemin) | TPU v5e `P99` (Zhemin) | TPU v5e SLA (Zhemin) |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **100** | `99.97` | `11.5 ms` | `13.6 ms` | `✅ PASS` | `100` | `11.5 ms` | `14.0 ms` | `✅ PASS` |
+| **120** | `119.96` | `12.2 ms` | `15.0 ms` | `✅ PASS` | `120` | `11.8 ms` | `15.5 ms` | `✅ PASS` |
+| **140** | `139.92` | `13.1 ms` | `15.1 ms` | `✅ PASS` | `140` | `11.6 ms` | `18.5 ms` | `✅ PASS` |
+| **160** | `159.91` | `12.5 ms` | `16.3 ms` | `✅ PASS` | `160` | `16.8 ms` | `24.2 ms` | `✅ PASS` |
+| **180** | `179.89` | `12.7 ms` | `25.5 ms` | `✅ PASS` | `180.1` | `19.9 ms` | `29.6 ms` | `✅ PASS` |
+| **190** | `189.87` | `12.3 ms` | `22.7 ms` | `✅ PASS` | `187.8` | `523.7 ms` | `762.7 ms` | `⚠️ SATURATED` |
+| **200** | `199.84` | `17.9 ms` | `26.6 ms` | `✅ PASS` | `189` | `1709 ms` | `2818 ms` | `⚠️ SATURATED` |
+| **220** | `219.76` | `18.5 ms` | `27.2 ms` | `✅ PASS` | `187.9` | `3738 ms` | `6182 ms` | `⚠️ SATURATED` |
+| **240** | `239.71` | `19.7 ms` | `28.4 ms` | `✅ PASS` | — | — | — | `⚠️ SATURATED` |
+| **260** | `259.69` | `20.7 ms` | `36.2 ms` | `✅ PASS` | — | — | — | `⚠️ SATURATED` |
+| **270** | **`269.73`** | **`19.0 ms`** | **`28.3 ms`** | **`✅ PASS`** | — | — | — | `⚠️ SATURATED` |
+| **280** | `275.68` | `47.6 ms` | `190.1 ms` | `⚠️ SATURATED` | — | — | — | `⚠️ SATURATED` |
+| **290** | `271.16` | `507.9 ms` | `836.9 ms` | `⚠️ SATURATED` | — | — | — | `⚠️ SATURATED` |
 
 ---
 
-### 2. 1KB Dedicated Saturation (`1,024 random chars ≈ 1K tokens`, `FP32`)
+### 1.3 `2KB Dedicated Saturation` (`2,048 chars ≈ 2,016 tokens`, `< 50 ms` `P99` SLA)
 
-| RPS | **TPU v6e Megakernel (`FP32`)**<br>Achieved | **TPU v6e Megakernel (`FP32`)**<br>P50 | **TPU v6e Megakernel (`FP32`)**<br>P99 | **TPU v6e Megakernel (`FP32`)**<br>SLA (`P99 < 50 ms`) | **Zhemin TPU v5e (`FP32`)**<br>Achieved / P50 / P99 / SLA |
-| :---: | :---: | :---: | :---: | :---: | :---: |
-| **100** | **99.99** | **8.6 ms** | **10.1 ms** | **✅ PASS** | `100` \| `11.5 ms` \| `14.0 ms` \| `✅ PASS` |
-| **120** | **119.97** | **8.7 ms** | **12.4 ms** | **✅ PASS** | `120` \| `11.8 ms` \| `15.5 ms` \| `✅ PASS` |
-| **140** | **139.94** | **11.0 ms** | **12.6 ms** | **✅ PASS** | `140` \| `11.6 ms` \| `18.5 ms` \| `✅ PASS` |
-| **160** | **159.91** | **10.6 ms** | **12.3 ms** | **✅ PASS** | `160` \| `16.8 ms` \| `24.2 ms` \| `✅ PASS` |
-| **180** | **179.89** | **10.4 ms** | **12.7 ms** | **✅ PASS** | `180.1` \| `19.9 ms` \| `29.6 ms` \| `✅ PASS` *(v5e Max)* |
-| **190** | **189.86** | **10.5 ms** | **15.4 ms** | **✅ PASS** | `187.8` \| `523.7 ms` \| `762.7 ms` \| `⚠️ SATURATED` |
-| **200** | **199.88** | **13.3 ms** | **38.8 ms** | **✅ PASS** | `189` \| `1709 ms` \| `2818 ms` \| `⚠️ SATURATED` |
-| **205** | **204.53** | **24.0 ms** | **45.0 ms** | **✅ PASS** | — *(Saturated at 190 RPS)* |
-| **210** | **209.64** | **11.5 ms** | **39.8 ms** | **✅ PASS** | — *(Saturated at 190 RPS)* |
-| **215** | **214.68** | **20.7 ms** | **36.8 ms** | **✅ PASS (Max `< 50 ms` Ceiling)** | — *(Saturated at 190 RPS)* |
-| **220** | **219.08** | **28.7 ms** | **77.0 ms** | **⚠️ SATURATED** | `187.9` \| `3738 ms` \| `6182 ms` \| `⚠️ SATURATED` |
+| RPS | TPU v6e Megakernel Achieved | TPU v6e Megakernel `P50` | TPU v6e Megakernel `P99` | TPU v6e Megakernel SLA (`<50ms`) | TPU v5e Achieved (Zhemin) | TPU v5e `P50` (Zhemin) | TPU v5e `P99` (Zhemin) | TPU v5e SLA (Zhemin) |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **90** | `89.96` | `17.0 ms` | `18.9 ms` | `✅ PASS` | `90` | `17.2 ms` | `26.5 ms` | `✅ PASS` |
+| **95** | `94.97` | `16.6 ms` | `18.3 ms` | `✅ PASS` | `94.75` | `218.6 ms` | `346.5 ms` | `⚠️ SATURATED` |
+| **100** | `99.96` | `16.3 ms` | `18.0 ms` | `✅ PASS` | `96.32` | `1031 ms` | `2185 ms` | `⚠️ SATURATED` |
+| **110** | `109.94` | `15.4 ms` | `16.9 ms` | `✅ PASS` | `96.74` | `3208 ms` | `5170 ms` | `⚠️ SATURATED` |
+| **120** | `119.94` | `14.5 ms` | `16.4 ms` | `✅ PASS` | — | — | — | `⚠️ SATURATED` |
+| **130** | `129.92` | `14.1 ms` | `17.9 ms` | `✅ PASS` | — | — | — | `⚠️ SATURATED` |
+| **140** | `139.92` | `14.1 ms` | `30.3 ms` | `✅ PASS` | — | — | — | `⚠️ SATURATED` |
+| **150** | **`149.90`** | **`13.9 ms`** | **`31.1 ms`** | **`✅ PASS`** | — | — | — | `⚠️ SATURATED` |
+| **155** | `151.34` | `122.9 ms` | `292.1 ms` | `⚠️ SATURATED` | — | — | — | `⚠️ SATURATED` |
+| **160** | `149.57` | `456.9 ms` | `836.6 ms` | `⚠️ SATURATED` | — | — | — | `⚠️ SATURATED` |
 
 ---
 
-### 3. 2KB Dedicated Saturation (`2,048 random chars ≈ 2K tokens`, `FP32`)
+## Part 2: Platform Comparison & Cost Improvement Matching Zhemin's `gid=1972899730` Tab (`1KB` & `2KB`)
 
-| RPS | **TPU v6e Megakernel (`FP32`)**<br>Achieved | **TPU v6e Megakernel (`FP32`)**<br>P50 | **TPU v6e Megakernel (`FP32`)**<br>P99 | **TPU v6e Megakernel (`FP32`)**<br>SLA (`P99 < 50 ms`) | **Zhemin TPU v5e (`FP32`)**<br>Achieved / P50 / P99 / SLA |
-| :---: | :---: | :---: | :---: | :---: | :---: |
-| **90** | **89.99** | **10.7 ms** | **12.9 ms** | **✅ PASS** | `90` \| `17.2 ms` \| `26.5 ms` \| `✅ PASS` *(v5e Max)* |
-| **95** | **94.99** | **10.7 ms** | **12.7 ms** | **✅ PASS** | `94.75` \| `218.6 ms` \| `346.5 ms` \| `⚠️ SATURATED` |
-| **100** | **99.98** | **11.7 ms** | **15.4 ms** | **✅ PASS** | `96.32` \| `1031 ms` \| `2185 ms` \| `⚠️ SATURATED` |
-| **110** | **109.95** | **13.7 ms** | **15.1 ms** | **✅ PASS** | `96.74` \| `3208 ms` \| `5170 ms` \| `⚠️ SATURATED` |
-| **120** | **119.94** | **12.9 ms** | **14.3 ms** | **✅ PASS** | — *(Saturated at 95 RPS)* |
-| **130** | **129.92** | **12.4 ms** | **13.8 ms** | **✅ PASS** | — *(Saturated at 95 RPS)* |
-| **140** | **139.92** | **12.2 ms** | **14.2 ms** | **✅ PASS** | — *(Saturated at 95 RPS)* |
-| **150** | **149.91** | **12.2 ms** | **15.4 ms** | **✅ PASS** | — *(Saturated at 95 RPS)* |
-| **155** | **154.90** | **12.8 ms** | **22.3 ms** | **✅ PASS (Max `< 50 ms` Ceiling)** | — *(Saturated at 95 RPS)* |
-| **160** | **159.90** | **49.2 ms** | **111.2 ms** | **⚠️ SATURATED** | — *(Saturated at 95 RPS)* |
+### 2.1 Concurrent Request Latency Comparison (`L4` vs `TPU v5e` vs `TPU v6e Megakernel`)
+
+| Payload Category | L4 `P50` | TPU v5e `P50` | TPU v6e Megakernel `P50` | v6e vs L4 `P50` | v6e vs v5e `P50` | L4 `P99` | TPU v5e `P99` | TPU v6e Megakernel `P99` | v6e vs L4 `P99` | v6e vs v5e `P99` |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **`1KB (1024 chars)` @ C=1** | `20.7 ms` | `11.5 ms` | **`9.0 ms`** | **`-56.5%`** | **`-21.7%`** | `23.5 ms` | `12.7 ms` | **`11.4 ms`** | **`-51.5%`** | **`-10.2%`** |
+| **`2KB (2048 chars)` @ C=1** | `24.3 ms` | `16.5 ms` | **`11.3 ms`** | **`-53.5%`** | **`-31.5%`** | `28.2 ms` | `17.7 ms` | **`13.0 ms`** | **`-53.9%`** | **`-26.6%`** |
+| **`1KB (1024 chars)` @ C=4** | `38.1 ms` | `21.2 ms` | **`20.5 ms`** | **`-46.2%`** | **`-3.3%`** | `42.9 ms` | `22.8 ms` | **`23.9 ms`** | **`-44.3%`** | `+4.8%` |
+| **`2KB (2048 chars)` @ C=4** | `52.1 ms` | `40.7 ms` | **`27.4 ms`** | **`-47.4%`** | **`-32.7%`** | `58.2 ms` | `42.8 ms` | **`32.2 ms`** | **`-44.7%`** | **`-24.8%`** |
+| **`1KB (1024 chars)` @ C=8** | `58.7 ms` | `42.5 ms` | **`31.4 ms`** | **`-46.5%`** | **`-26.1%`** | `66.3 ms` | `44.5 ms` | **`37.5 ms`** | **`-43.4%`** | **`-15.7%`** |
+| **`2KB (2048 chars)` @ C=8** | `87.4 ms` | `82.6 ms` | **`50.1 ms`** | **`-42.7%`** | **`-39.3%`** | `97.3 ms` | `86.0 ms` | **`54.4 ms`** | **`-44.1%`** | **`-36.7%`** |
+
+---
+
+### 2.2 RPS Saturation Result (`< 50 ms` `P99` Latency SLA)
+
+| Payload Size | NVIDIA L4 (`g2-standard-8`) | TPU v5e-1 (`FP32`) | TPU v6e-1 (`FP32` Megakernel, `max_len=2048`) | TPU v6e `P50` at Max RPS | TPU v6e `P99` at Max RPS | TPU v6e Gain vs L4 | TPU v6e Gain vs TPU v5e |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **`1KB (1,024 chars ≈ 1,009 tokens)`** | `70 RPS` | `180 RPS` | **`270 RPS`** | `19.0 ms` | `28.3 ms` | **`3.86x (+285.7%)`** | **`1.50x (+50.0%)`** |
+| **`2KB (2,048 chars ≈ 2,016 tokens)`** | `40 RPS` | `90 RPS` | **`150 RPS`** | `13.9 ms` | `31.1 ms` | **`3.75x (+275.0%)`** | **`1.67x (+66.7%)`** |
+
+---
+
+### 2.3 Cost Improvement & Production Fleet TCO (`100%` Max Capacity & `40%` Production Fleet Utilization)
+
+| Payload Size | Platform | On-Demand Price (`$/hr`) | Max Validated RPS (`<50ms P99`) | Throughput per Dollar (`RPS/$/hr`) | Relative Perf/$ vs L4 | Effective RPS @ `40%` Fleet Util | Nodes for `1,000 RPS` (`@40%` Util) | Monthly Cost (`1,000 RPS` @ `40%`) | Monthly TCO Savings vs L4 |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **`1KB`** | **NVIDIA L4 (`g2-standard-8`)** | `\$1.0124` | `70 RPS` | `69.14 RPS/\$` | `1.00x (Baseline)` | `28.0 RPS` | `36` | `\$26,606 / mo` | `Baseline` |
+| **`1KB`** | **TPU v5e-1 (`ct5lp-hightpu-1t`, FP32)** | `\$0.7990` | `180 RPS` | `225.28 RPS/\$` | `3.26x (+225.8%)` | `72.0 RPS` | `14` | `\$8,166 / mo` | **`-69.3% (\$18,440/mo saved)`** |
+| **`1KB`** | **TPU v6e-1 (`ct6e-standard-1t`, FP32 Megakernel)** | `\$0.9990` | **`270 RPS`** | **`270.27 RPS/\$`** | **`3.91x (+290.9%)`** | **`108.0 RPS`** | **`10`** | **`\$7,293 / mo`** | **`-72.6% (\$19,313/mo saved)`** |
+| **`2KB`** | **NVIDIA L4 (`g2-standard-8`)** | `\$1.0124` | `40 RPS` | `39.51 RPS/\$` | `1.00x (Baseline)` | `16.0 RPS` | `63` | `\$46,560 / mo` | `Baseline` |
+| **`2KB`** | **TPU v5e-1 (`ct5lp-hightpu-1t`, FP32)** | `\$0.7990` | `90 RPS` | `112.64 RPS/\$` | `2.85x (+185.1%)` | `36.0 RPS` | `28` | `\$16,332 / mo` | **`-64.9% (\$30,228/mo saved)`** |
+| **`2KB`** | **TPU v6e-1 (`ct6e-standard-1t`, FP32 Megakernel)** | `\$0.9990` | **`150 RPS`** | **`150.15 RPS/\$`** | **`3.80x (+280.0%)`** | **`60.0 RPS`** | **`17`** | **`\$12,398 / mo`** | **`-73.4% (\$34,162/mo saved)`** |

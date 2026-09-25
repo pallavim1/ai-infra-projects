@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """JAX-native JinaBert (jina-embeddings-v2) encoder-only embedding model
+on `jina-v2-embeddings-clean` strictly supporting `max_model_len <= 2048`
 with TPU v6e (Trillium) 4-Layer Fused FP32 Megakernel (`jina_v6e_4layer_megakernel`).
 """
 
@@ -26,7 +27,10 @@ from jax.sharding import Mesh
 from vllm.config import VllmConfig
 
 from tpu_inference import utils
-from tpu_inference.kernels.jina_v6e_megakernel import jina_v6e_4layer_megakernel
+from tpu_inference.kernels.jina_v6e_megakernel import (
+    MAX_MODEL_LEN,
+    jina_v6e_4layer_megakernel,
+)
 from tpu_inference.layers.common.attention_interface import \
     encoder_only_attention
 from tpu_inference.layers.common.attention_metadata import AttentionMetadata
@@ -46,10 +50,7 @@ init_fn = nnx.initializers.uniform()
 
 
 def get_alibi_slopes(n_heads: int) -> List[float]:
-    """Standard ALiBi head slopes (geometric sequence), incl. non-power-of-2.
-
-    Matches `_get_alibi_head_slopes` in the JinaBert reference implementation.
-    """
+    """Standard ALiBi head slopes (geometric sequence), incl. non-power-of-2."""
 
     def slopes_power_of_2(n):
         start = 2**(-(2**-(math.log2(n) - 3)))
@@ -101,7 +102,6 @@ class JinaBertEmbeddings(JaxModule):
             dtype=dtype,
             rngs=rng,
         )
-        # Embedding tables must be loaded as-is (no 2D transpose).
         _set_weight_loader(self.word_embeddings.weight,
                            "embeddings.word_embeddings.weight",
                            permute_dims=(0, 1))
@@ -111,7 +111,6 @@ class JinaBertEmbeddings(JaxModule):
 
     def __call__(self, input_ids: jax.Array) -> jax.Array:
         x = self.word_embeddings(input_ids)
-        # Embedding use: token_type_ids are all zeros -> row 0 broadcast.
         x = x + self.token_type_embeddings.weight.value[0]
         return self.LayerNorm(x)
 
@@ -142,7 +141,6 @@ class JinaBertSelfAttention(JaxModule):
                 rngs=rng,
                 prefix=f"{prefix}.{name}",
             )
-            # HF: [N*H, D] -> reshape (N, H, D) -> permute to (D, N, H).
             _set_weight_loader(proj.weight,
                                f"{prefix}.{name}.weight",
                                reshape_dims=(self.num_heads, self.head_dim,
@@ -157,15 +155,11 @@ class JinaBertSelfAttention(JaxModule):
         self.query = qkv("query")
         self.key = qkv("key")
         self.value = qkv("value")
-
-        # Constant per-head ALiBi slopes; a plain tuple of floats so Flax
-        # treats it as static (arrays in static attributes are rejected by
-        # Flax >= 0.12 pytree checks).
         self.alibi_slopes = tuple(get_alibi_slopes(self.num_heads))
 
     def __call__(self, x: jax.Array,
                  attention_metadata: AttentionMetadata) -> jax.Array:
-        q = self.query(x)  # [T, N, H]
+        q = self.query(x)
         k = self.key(x)
         v = self.value(x)
         return encoder_only_attention(
@@ -195,7 +189,6 @@ class JinaBertSelfOutput(JaxModule):
             rngs=rng,
             prefix=prefix + ".dense",
         )
-        # HF: [D_out, N*H] -> reshape (D, N, H) -> permute to (N, H, D).
         _set_weight_loader(self.dense.weight,
                            f"{prefix}.dense.weight",
                            reshape_dims=(hidden_size, num_heads, head_dim),
@@ -275,7 +268,6 @@ class JinaBertGLUMLP(JaxModule):
         h = self.gated_layers(x)
         gated = h[..., :self.intermediate_size]
         non_gated = h[..., self.intermediate_size:]
-        # HF reference uses torch.nn.GELU() (exact erf form).
         h = jax.nn.gelu(gated, approximate=False) * non_gated
         h = self.wo(h)
         return self.layernorm(h + residual)
@@ -299,7 +291,7 @@ class JinaBertLayer(JaxModule):
 
 
 class JinaBertEncoder(JaxModule):
-    """4-Layer JinaBert Encoder powered by the TPU v6e Fused Megakernel."""
+    """4-Layer JinaBert Encoder powered by the TPU v6e Fused Megakernel (`MAX_MODEL_LEN = 2048`)."""
 
     def __init__(self, config, dtype: jnp.dtype, rng: nnx.Rngs, mesh: Mesh,
                  prefix: str):
@@ -319,6 +311,11 @@ class JinaBertEncoder(JaxModule):
 
     def __call__(self, x: jax.Array,
                  attention_metadata: AttentionMetadata) -> jax.Array:
+        if x.shape[0] > MAX_MODEL_LEN:
+            raise ValueError(
+                f"JinaBertEncoder on jina-v2-embeddings-clean strictly supports "
+                f"max_model_len <= {MAX_MODEL_LEN}, got {x.shape[0]}"
+            )
         w_qkv = jnp.stack([
             jnp.stack([
                 getattr(L.attention, "self").query.weight.value,
@@ -384,6 +381,15 @@ class JinaBertModel(JaxModule):
 
     def __init__(self, vllm_config: VllmConfig, rng: nnx.Rngs, mesh: Mesh):
         config = vllm_config.model_config.hf_config
+        config.max_position_embeddings = min(
+            getattr(config, "max_position_embeddings", MAX_MODEL_LEN),
+            MAX_MODEL_LEN,
+        )
+        if vllm_config.model_config.max_model_len > MAX_MODEL_LEN:
+            raise ValueError(
+                f"JinaBertModel on jina-v2-embeddings-clean strictly supports "
+                f"max_model_len <= {MAX_MODEL_LEN}, got {vllm_config.model_config.max_model_len}"
+            )
         dtype = vllm_config.model_config.dtype
         self.embeddings = JinaBertEmbeddings(config, dtype, rng)
         self.encoder = JinaBertEncoder(config,
@@ -399,7 +405,7 @@ class JinaBertModel(JaxModule):
 
 
 class JinaBertForMaskedLM(JaxModule, LoadableWithIterator):
-    """Embedding-only JinaBert ("JinaBertForMaskedLM" arch string) with TPU v6e Megakernel."""
+    """Embedding-only JinaBert ("JinaBertForMaskedLM") with TPU v6e 2048-Capped Megakernel."""
 
     is_pooling_model = True
 
@@ -431,8 +437,6 @@ class JinaBertForMaskedLM(JaxModule, LoadableWithIterator):
         return kv_caches, hidden_states, [], None
 
     def load_weights(self, weights):
-        """Strip optional 'bert.' prefixes and drop MLM-head/pooler weights,
-        then delegate to the standard JAX auto-loader."""
         from tpu_inference.models.jax.utils.weight_utils import \
             JaxAutoWeightsLoader
         from tpu_inference.utils import to_torch_dtype

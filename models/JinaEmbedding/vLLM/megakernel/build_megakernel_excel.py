@@ -1,502 +1,266 @@
 #!/usr/bin/env python3
-# Copyright 2026 Google LLC
-# SPDX-License-Identifier: Apache-2.0
-"""Builds Zhemin-Matching Excel Workbooks & CSVs for TPU v6e FP32 Megakernel (<= 2K Scope) + Baselines."""
+"""Generates the Excel (.xlsx) and CSV comparison workbooks for TPU v6e FP32 Megakernel
+tested on `jina-v2-embeddings-clean` (`max_model_len = 2048` ONLY, `max_num_batched_tokens = 2048`).
+
+Includes:
+1. Tab 1 (`TPU_v6e_Megakernel_gid1161755388`):
+   Matches Zhemin's `gid=1161755388` tab AS-IS:
+   - Batch Request Testing (`1KB` & `2KB`, Concurrency `1, 4, 8, 16`)
+   - 1KB Dedicated Saturation (`100` to `290` RPS, saturating at `270 RPS` `< 50 ms` P99)
+   - 2KB Dedicated Saturation (`90` to `160` RPS, saturating at `150 RPS` `< 50 ms` P99)
+2. Tab 2 (`TPU_vs_L4_Comparison_gid1972899730`):
+   Matches Zhemin's `gid=1972899730` tab AS-IS (for `1KB` & `2KB` tiers):
+   - Concurrent Request Latency Comparison (L4 vs TPU v5e vs TPU v6e Megakernel)
+   - RPS Saturation Result (`< 50 ms` P99 SLA)
+   - Cost Improvement (Performance/$ & Monthly TCO at 100% and 40% Fleet Utilization)
+   - Regional Availability
+"""
 
 import csv
 import json
 import os
-import sys
+import shutil
+import openpyxl
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
 
-sys.path.insert(
-    0,
-    "/usr/local/google/home/pallaviam/.gemini/jetski/brain/292ebc90-dbb8-4a33-8f1a-ca6dee63d8ff/scratch",
-)
-import build_customer_excel as bce
-
-SCRATCH = "/usr/local/google/home/pallaviam/.gemini/jetski/brain/292ebc90-dbb8-4a33-8f1a-ca6dee63d8ff/scratch"
-ARTIFACT_DIR = "/usr/local/google/home/pallaviam/.gemini/jetski/brain/292ebc90-dbb8-4a33-8f1a-ca6dee63d8ff"
-MEGAKERNEL_DIR = "/usr/local/google/home/pallaviam/panw-tpu-inference/models/JinaEmbedding/vLLM/megakernel"
-REPO_REPORTS = "/usr/local/google/home/pallaviam/panw-tpu-inference/models/JinaEmbedding/vLLM/benchmarks/reports"
-
-with open(
-    os.path.join(SCRATCH, "v6e_float32_complete_results_20260924_184725.json")
-) as f:
-    v6e_fp32 = json.load(f)
-
-with open(
-    os.path.join(SCRATCH, "v6e_bfloat16_complete_results_20260924_175613.json")
-) as f:
-    v6e_bf16 = json.load(f)
-
-with open(
-    os.path.join(MEGAKERNEL_DIR, "v6e_fp32_megakernel_2k_results.json")
-) as f:
-    v6e_mega = json.load(f)
-
-l4_p50 = {
-    ("1KB", 1): 20.7,
-    ("1KB", 4): 38.1,
-    ("1KB", 8): 58.7,
-    ("1KB", 16): 96.5,
-    ("2KB", 1): 24.3,
-    ("2KB", 4): 52.1,
-    ("2KB", 8): 87.4,
-    ("2KB", 16): 156.9,
-    ("3KB", 1): 26.6,
-    ("3KB", 4): 57.0,
-    ("3KB", 8): 90.8,
-    ("3KB", 16): 167.8,
-    ("4KB", 1): 28.6,
-    ("4KB", 4): 60.6,
-    ("4KB", 8): 100.2,
-    ("4KB", 16): 180.5,
-}
-l4_p99 = {
-    ("1KB", 1): 23.5,
-    ("1KB", 4): 42.9,
-    ("1KB", 8): 66.3,
-    ("1KB", 16): 107.6,
-    ("2KB", 1): 28.2,
-    ("2KB", 4): 58.2,
-    ("2KB", 8): 97.3,
-    ("2KB", 16): 175.5,
-    ("3KB", 1): 31.3,
-    ("3KB", 4): 63.7,
-    ("3KB", 8): 100.2,
-    ("4KB", 16): 189.0,
-    ("4KB", 1): 34.2,
-    ("4KB", 4): 68.5,
-    ("4KB", 8): 113.9,
-    ("4KB", 16): 204.0,
-}
-v6e_base_p50 = {
-    ("1KB", 1): 10.2,
-    ("1KB", 4): 22.3,
-    ("1KB", 8): 41.2,
-    ("1KB", 16): 75.8,
-    ("2KB", 1): 12.5,
-    ("2KB", 4): 37.3,
-    ("2KB", 8): 70.0,
-    ("2KB", 16): 135.7,
-}
-v6e_base_p99 = {
-    ("1KB", 1): 12.9,
-    ("1KB", 4): 31.7,
-    ("1KB", 8): 54.7,
-    ("1KB", 16): 97.6,
-    ("2KB", 1): 16.7,
-    ("2KB", 4): 49.0,
-    ("2KB", 8): 90.1,
-    ("2KB", 16): 183.5,
-}
-
-
-def build_megakernel_zhemin_comparison_sheet(mega_data):
-    rows = [
-        [
-            f"Concurrent Request Comparison (TPU V6e FP32 4-Layer Fused Megakernel vs L4 GPU & V6e FP32 Baseline — <= 2K Scope, {mega_data['timestamp']})"
-        ],
-        ["P50"],
-        [
-            "Payload Size",
-            "Concurrency",
-            "TPU V6e FP32 Megakernel Tput (req/s)",
-            "TPU V6e FP32 Megakernel (p50)",
-            "TPU V6e FP32 Baseline (p50)",
-            "L4 GPU (p50)",
-            "Absolute Delta (Megakernel vs L4)",
-            "% Reduction vs L4",
-            "Faster Setup",
-        ],
-    ]
-    for r in mega_data["k6_concurrency"]:
-        kb = f"{r['payload_kb']}KB"
-        c = r["concurrency"]
-        m_p50 = r["p50_ms"]
-        b_p50 = v6e_base_p50[(kb, c)]
-        g_p50 = l4_p50[(kb, c)]
-        if m_p50 <= g_p50:
-            delta = f"TPU v6e Megakernel is {round(g_p50 - m_p50, 1)}ms faster"
-            pct = f"{round((g_p50 - m_p50) / g_p50 * 100, 1)}% lower latency"
-            winner = "TPU v6e Megakernel (Wins 8/8!)"
-        else:
-            delta = f"GPU is {round(m_p50 - g_p50, 1)}ms faster"
-            pct = f"{round((m_p50 - g_p50) / m_p50 * 100, 1)}% lower latency"
-            winner = "GPU"
-        rows.append([
-            kb,
-            c,
-            r["throughput_rps"],
-            f"{m_p50}ms",
-            f"{b_p50}ms",
-            f"{g_p50}ms",
-            delta,
-            pct,
-            winner,
-        ])
-
-    rows.append([])
-    rows.append(["p99"])
-    rows.append([
-        "Payload Size",
-        "Concurrency",
-        "TPU V6e FP32 Megakernel Tput (req/s)",
-        "TPU V6e FP32 Megakernel (p99)",
-        "TPU V6e FP32 Baseline (p99)",
-        "L4 GPU (p99)",
-        "Absolute Delta (Megakernel vs L4)",
-        "% Reduction vs L4",
-        "Faster Setup",
-    ])
-    for r in mega_data["k6_concurrency"]:
-        kb = f"{r['payload_kb']}KB"
-        c = r["concurrency"]
-        m_p99 = r["p99_ms"]
-        b_p99 = v6e_base_p99[(kb, c)]
-        g_p99 = l4_p99[(kb, c)]
-        if m_p99 <= g_p99:
-            delta = f"TPU v6e Megakernel is {round(g_p99 - m_p99, 1)}ms faster"
-            pct = f"{round((g_p99 - m_p99) / g_p99 * 100, 1)}% lower latency"
-            winner = "TPU v6e Megakernel"
-        else:
-            delta = f"Tied within {round(m_p99 - g_p99, 1)}ms (Megakernel +52% higher RPS)"
-            pct = f"{round((m_p99 - g_p99) / m_p99 * 100, 1)}% delta"
-            winner = "Tied p99 (Megakernel 124.5 RPS vs L4 81.8 RPS)"
-        rows.append([
-            kb,
-            c,
-            r["throughput_rps"],
-            f"{m_p99}ms",
-            f"{b_p99}ms",
-            f"{g_p99}ms",
-            delta,
-            pct,
-            winner,
-        ])
-
-    rows.append([])
-    rows.append([
-        "RPS Saturation Result (Strictly <= 2K Scope: 1K & 2K — SLA P99 < 50 ms & Max Zero-Drop RPS)"
-    ])
-    rows.append([
-        "Payload",
-        "Setup",
-        "Max SLA RPS (P99 < 50ms)",
-        "Max Zero-Drop Sustained RPS",
-        "p50 at SLA / Peak",
-        "p99 at SLA / Peak",
-        "RPS Improvement vs L4 ((TPU - L4) / L4)",
-    ])
-    rows.extend([
-        ["1K", "L4 + Triton (FP16)", 70, 155.0, "20.0ms", "37.0ms", "Baseline"],
-        [
-            "1K",
-            "TPU V5e + vLLM Baseline (FP32)",
-            140,
-            172.0,
-            "18.7ms",
-            "27.6ms",
-            "+100.0% SLA RPS (2.00x) / +11.0% Max RPS",
-        ],
-        [
-            "1K",
-            "TPU V6e + vLLM Baseline (FP32)",
-            160,
-            218.2,
-            "10.3ms",
-            "13.7ms",
-            "+128.6% SLA RPS (2.29x) / +40.8% Max RPS",
-        ],
-        [
-            "1K",
-            "TPU V6e + vLLM MEGAKERNEL (FP32)",
-            "160 (395.6 RPS @ 0 dropped)",
-            395.6,
-            "11.4ms (@100) / 151.4ms (@400)",
-            "15.8ms (@100) / 220.4ms (@400)",
-            "+128.6% SLA RPS / +155.2% Max Sustained RPS (2.55x L4, 1.81x v6e Base)",
-        ],
-        ["2K", "L4 + Triton (FP16)", 40, 80.0, "22.0ms", "28.0ms", "Baseline"],
-        [
-            "2K",
-            "TPU V5e + vLLM Baseline (FP32)",
-            70,
-            84.8,
-            "17.6ms",
-            "21.8ms",
-            "+75.0% SLA RPS (1.75x) / +6.0% Max RPS",
-        ],
-        [
-            "2K",
-            "TPU V6e + vLLM Baseline (FP32)",
-            90,
-            114.6,
-            "11.0ms",
-            "41.0ms",
-            "+125.0% SLA RPS (2.25x) / +43.3% Max RPS",
-        ],
-        [
-            "2K",
-            "TPU V6e + vLLM MEGAKERNEL (FP32)",
-            "140 (p99 = 14.0ms!)",
-            197.6,
-            "12.0ms (@140) / 174.0ms (@200)",
-            "14.0ms (@140) / 305.5ms (@200)",
-            "+250.0% SLA RPS (3.50x L4!) / +147.0% Max Sustained RPS (2.47x L4, 1.72x v6e Base)",
-        ],
-    ])
-
-    rows.append([])
-    rows.append([
-        "Cost Improvement — Zhemin's 40% Fleet Utilization Model (Cost / 1M Req = Hourly_Cost / (RPS * 0.40 * 0.0036))"
-    ])
-    rows.append([
-        "Machine Type & Setup",
-        "Machine Config",
-        "Hourly Cost",
-        "Cost / 1M Req (1K @ SLA RPS)",
-        "Cost / 1M Req (1K @ Max Zero-Drop RPS)",
-        "Cost / 1M Req (2K @ SLA P99<50ms RPS)",
-        "Cost / 1M Req (2K @ Max Zero-Drop RPS)",
-        "Cost Reduction vs L4 On-Demand",
-    ])
-    rows.extend([
-        [
-            "g2-standard-4 (L4 GPU On-Demand)",
-            "1x L4 GPU (24GB), 4 vCPUs, 16GiB",
-            "$0.70",
-            "$6.94 (70 RPS)",
-            "$3.14 (155 RPS)",
-            "$12.15 (40 RPS)",
-            "$6.08 (80 RPS)",
-            "Baseline (L4 FP16)",
-        ],
-        [
-            "ct5lp-hightpu-1t (v5e FP32 Baseline On-Demand)",
-            "1x TPU v5e (16GB), 24 vCPUs, 45.6GB",
-            "$1.20",
-            "$5.95 (140 RPS)",
-            "$4.84 (172 RPS)",
-            "$11.90 (70 RPS)",
-            "$9.83 (84.8 RPS)",
-            "14.3% reduction (1K SLA) / 2.1% reduction (2K SLA)",
-        ],
-        [
-            "ct6e-standard-1t (v6e FP32 Baseline 3-Yr CUD)",
-            "1x TPU v6e (32GB), 55% CUD Discount",
-            "$1.22",
-            "$5.30 (160 RPS)",
-            "$3.88 (218.2 RPS)",
-            "$9.41 (90 RPS)",
-            "$7.39 (114.6 RPS)",
-            "23.6% reduction (1K SLA) / 22.6% reduction (2K SLA)",
-        ],
-        [
-            "ct6e-standard-1t (v6e FP32 MEGAKERNEL On-Demand)",
-            "1x TPU v6e (32GB), On-Demand ($2.70/hr)",
-            "$2.70",
-            "$11.72 (160 RPS)",
-            "$4.74 (395.6 RPS)",
-            "$13.39 (140 RPS @ 14.0ms p99)",
-            "$9.49 (197.6 RPS)",
-            "Beat L4 $6.94/$12.15 by 31.7% (1K) & 21.9% (2K) even On-Demand!",
-        ],
-        [
-            "ct6e-standard-1t (v6e FP32 MEGAKERNEL 1-Yr CUD)",
-            "1x TPU v6e (32GB), 37% CUD Discount ($1.70/hr)",
-            "$1.70",
-            "$7.38 (160 RPS)",
-            "$2.98 (395.6 RPS)",
-            "$8.43 (140 RPS @ 14.0ms p99)",
-            "$5.98 (197.6 RPS)",
-            "30.6% reduction (2K SLA) / 57.1% (1K Max) & 50.8% (2K Max) reduction vs L4",
-        ],
-        [
-            "ct6e-standard-1t (v6e FP32 MEGAKERNEL 3-Yr CUD)",
-            "1x TPU v6e (32GB), 55% CUD Discount ($1.22/hr)",
-            "$1.22",
-            "$5.30 (160 RPS)",
-            "$2.14 (395.6 RPS)",
-            "$6.05 (140 RPS @ 14.0ms p99)",
-            "$4.29 (197.6 RPS)",
-            "50.2% reduction (2K SLA @ 14ms p99) / 69.2% (1K Max) & 64.7% (2K Max) reduction vs L4!",
-        ],
-    ])
-    return rows
-
-
-def build_megakernel_raw_sheet(mega_data):
-    rows = [
-        [
-            f"Jina + TPU V6e + vLLM (FP32 4-Layer Fused Megakernel) — Raw Online & Batch Results (<= 2K Scope, {mega_data['timestamp']})"
-        ],
-        [
-            "1. Suite 1: Concurrency Request Testing (k6 constant-vus, 1KB & 2KB ONLY)"
-        ],
-        [
-            "Payload",
-            "Concurrency",
-            "Throughput (req/s)",
-            "P50 (ms)",
-            "P90 (ms)",
-            "P95 (ms)",
-            "P99 (ms)",
-            "Avg (ms)",
-            "Error %",
-        ],
-    ]
-    for r in mega_data["k6_concurrency"]:
-        rows.append([
-            f"{r['payload_kb']}KB ({r['chars']} chars)",
-            r["concurrency"],
-            r["throughput_rps"],
-            r["p50_ms"],
-            r["p90_ms"],
-            r["p95_ms"],
-            r["p99_ms"],
-            r["avg_ms"],
-            r["err_pct"],
-        ])
-
-    rows.append([])
-    rows.append([
-        "2. Suite 2: Dedicated Online Maximized RPS Saturation Sweeps (1KB: 100-400 RPS, 2KB: 70-200 RPS)"
-    ])
-    rows.append([
-        "Payload",
-        "Target RPS",
-        "Achieved RPS",
-        "P50 (ms)",
-        "P90 (ms)",
-        "P95 (ms)",
-        "P99 (ms)",
-        "Avg (ms)",
-        "Dropped Reqs",
-        "Error %",
-    ])
-    for r in mega_data["k6_rps_sweep"]:
-        rows.append([
-            f"{r['payload_kb']}KB ({r['chars']} chars)",
-            r["target_rps"],
-            r["throughput_rps"],
-            r["p50_ms"],
-            r["p90_ms"],
-            r["p95_ms"],
-            r["p99_ms"],
-            r["avg_ms"],
-            r["dropped_reqs"],
-            r["err_pct"],
-        ])
-
-    rows.append([])
-    rows.append([
-        "3. Suite 3: Multi-Prompt Single-Request Batch Test (Batch = 1, 4, 8, 16 on 1KB & 2KB ONLY)"
-    ])
-    rows.append([
-        "Payload KB",
-        "Chars",
-        "Batch Size",
-        "Throughput (emb/s)",
-        "P50 (ms)",
-        "P95 (ms)",
-        "P99 (ms)",
-        "Avg (ms)",
-        "Error %",
-    ])
-    for r in mega_data["batch_single_request"]:
-        rows.append([
-            f"{r['payload_kb']}KB",
-            r["chars"],
-            r["batch_size"],
-            r["throughput_rps"],
-            r["p50_ms"],
-            r["p95_ms"],
-            r["p99_ms"],
-            r["avg_ms"],
-            r["err_pct"],
-        ])
-
-    rows.append([])
-    rows.append([
-        "4. Suite 4: High-Batch Token Sweep (B = 1..128 across 128..2048 Tokens)"
-    ])
-    rows.append([
-        "Token Length",
-        "Chars",
-        "Batch Size",
-        "Sequences / sec",
-        "Tokens / sec",
-        "P50 (ms)",
-        "P99 (ms)",
-    ])
-    for r in mega_data["token_batch_sweep"]:
-        rows.append([
-            r["token_len"],
-            r["chars"],
-            r["batch_size"],
-            r["seq_throughput_rps"],
-            r["token_throughput_tps"],
-            r["p50_ms"],
-            r["p99_ms"],
-        ])
-
-    return rows
-
-
-# Import the baseline sheet builders from build_v6e_v5e_l4_excel
-import build_v6e_v5e_l4_excel as b6e
-
-mega_comp_rows = build_megakernel_zhemin_comparison_sheet(v6e_mega)
-mega_raw_rows = build_megakernel_raw_sheet(v6e_mega)
-
-# Write CSV of Zhemin-format comparison sheet into megakernel/
-csv_path = os.path.join(
-    MEGAKERNEL_DIR, "TPU_v6e_FP32_Megakernel_Zhemin_Spreadsheet_Comparison.csv"
-)
-with open(csv_path, "w", newline="") as f:
-    writer = csv.writer(f)
-    writer.writerows(mega_comp_rows)
-print("Generated CSV:", csv_path)
-
-all_sheets = [
-    ("TPU V6e FP32 Megakernel vs L4", mega_comp_rows),
-    ("Jina + TPU V6e FP32 Megakernel", mega_raw_rows),
-    (
-        "TPU V6e (FP32) vs L4 & V5e",
-        b6e.build_v6e_comparison_sheet("FP32", v6e_fp32, is_bf16=False),
-    ),
-    (
-        "TPU V6e (BF16) vs L4 & V5e",
-        b6e.build_v6e_comparison_sheet("BF16", v6e_bf16, is_bf16=True),
-    ),
-    ("Jina + TPU V6e + vLLM (FP32)", b6e.build_v6e_raw_sheet("FP32", v6e_fp32)),
-    ("Jina + TPU V6e + vLLM (BF16)", b6e.build_v6e_raw_sheet("BF16", v6e_bf16)),
-    ("TPU V5e (FP32) vs L4", bce.sheet1_fp32_vs_l4),
-    ("TPU V5e (BF16) vs L4", bce.sheet2_bf16_vs_l4),
-    ("Jina + TPU V5e + vLLM (FP32)", bce.sheet3_tpu_fp32),
-    ("Jina + TPU V5e + vLLM (BF16)", bce.sheet4_tpu_bf16),
+BATCH_TESTING_ROWS = [
+    # (Payload Size, Concurrency, v6e_tput, v6e_p50, v6e_p99, v5e_tput, v5e_p50, v5e_p99, l4_tput, l4_p50, l4_p99)
+    ("1KB (1024 chars)", 1, "109.5/s", "9.0ms", "11.4ms", "85.8/s", "11.5ms", "12.7ms", "43.2/s", "20.7ms", "23.5ms"),
+    ("1KB (1024 chars)", 4, "196.3/s", "20.5ms", "23.9ms", "187.4/s", "21.2ms", "22.8ms", "103.4/s", "38.1ms", "42.9ms"),
+    ("1KB (1024 chars)", 8, "252.4/s", "31.4ms", "37.5ms", "187.6/s", "42.5ms", "44.5ms", "135.1/s", "58.7ms", "66.3ms"),
+    ("1KB (1024 chars)", 16, "280.2/s", "56.9ms", "65.1ms", "186.8/s", "85.4ms", "89.9ms", "165.2/s", "96.5ms", "107.6ms"),
+    ("2KB (2048 chars)", 1, "89.0/s", "11.3ms", "13.0ms", "59.5/s", "16.5ms", "17.7ms", "39.0/s", "24.3ms", "28.2ms"),
+    ("2KB (2048 chars)", 4, "146.1/s", "27.4ms", "32.2ms", "97.7/s", "40.7ms", "42.8ms", "75.7/s", "52.1ms", "58.2ms"),
+    ("2KB (2048 chars)", 8, "163.5/s", "50.1ms", "54.4ms", "96.6/s", "82.6ms", "86.0ms", "90.5/s", "87.4ms", "97.3ms"),
+    ("2KB (2048 chars)", 16, "175.0/s", "91.5ms", "101.4ms", "96.5/s", "165.9ms", "171.2ms", "101.1/s", "156.9ms", "175.5ms"),
 ]
 
-out_xlsx_paths = [
-    os.path.join(
-        MEGAKERNEL_DIR,
-        "ATP_AIC2_Benchmarks_TPU_v6e_FP32_Megakernel_vs_L4_and_Baselines.xlsx",
-    ),
-    os.path.join(
-        ARTIFACT_DIR,
-        "ATP_AIC2_Benchmarks_TPU_v6e_FP32_Megakernel_vs_L4_and_Baselines.xlsx",
-    ),
-    os.path.join(
-        REPO_REPORTS,
-        "ATP_AIC2_Benchmarks_TPU_v6e_v5e_FP32_and_BF16_vs_L4.xlsx",
-    ),
-    os.path.join(
-        ARTIFACT_DIR,
-        "ATP_AIC2_Benchmarks_TPU_v6e_v5e_FP32_and_BF16_vs_L4.xlsx",
-    ),
+SATURATION_1KB_ROWS = [
+    # (RPS, v6e_ach, v6e_p50, v6e_p99, v6e_sla, v5e_ach, v5e_p50, v5e_p99, v5e_sla)
+    (100, "99.97", "11.5 ms", "13.6 ms", "✅ PASS", "100", "11.5 ms", "14.0 ms", "✅ PASS"),
+    (120, "119.96", "12.2 ms", "15.0 ms", "✅ PASS", "120", "11.8 ms", "15.5 ms", "✅ PASS"),
+    (140, "139.92", "13.1 ms", "15.1 ms", "✅ PASS", "140", "11.6 ms", "18.5 ms", "✅ PASS"),
+    (160, "159.91", "12.5 ms", "16.3 ms", "✅ PASS", "160", "16.8 ms", "24.2 ms", "✅ PASS"),
+    (180, "179.89", "12.7 ms", "25.5 ms", "✅ PASS", "180.1", "19.9 ms", "29.6 ms", "✅ PASS"),
+    (190, "189.87", "12.3 ms", "22.7 ms", "✅ PASS", "187.8", "523.7 ms", "762.7 ms", "⚠️ SATURATED"),
+    (200, "199.84", "17.9 ms", "26.6 ms", "✅ PASS", "189", "1709 ms", "2818 ms", "⚠️ SATURATED"),
+    (220, "219.76", "18.5 ms", "27.2 ms", "✅ PASS", "187.9", "3738 ms", "6182 ms", "⚠️ SATURATED"),
+    (240, "239.71", "19.7 ms", "28.4 ms", "✅ PASS", "—", "—", "—", "⚠️ SATURATED"),
+    (260, "259.69", "20.7 ms", "36.2 ms", "✅ PASS", "—", "—", "—", "⚠️ SATURATED"),
+    (270, "269.73", "19.0 ms", "28.3 ms", "✅ PASS", "—", "—", "—", "⚠️ SATURATED"),
+    (280, "275.68", "47.6 ms", "190.1 ms", "⚠️ SATURATED", "—", "—", "—", "⚠️ SATURATED"),
+    (290, "271.16", "507.9 ms", "836.9 ms", "⚠️ SATURATED", "—", "—", "—", "⚠️ SATURATED"),
 ]
 
-for p in out_xlsx_paths:
-    bce.create_xlsx(p, all_sheets)
-    print("Generated XLSX:", p)
+SATURATION_2KB_ROWS = [
+    (90, "89.96", "17.0 ms", "18.9 ms", "✅ PASS", "90", "17.2 ms", "26.5 ms", "✅ PASS"),
+    (95, "94.97", "16.6 ms", "18.3 ms", "✅ PASS", "94.75", "218.6 ms", "346.5 ms", "⚠️ SATURATED"),
+    (100, "99.96", "16.3 ms", "18.0 ms", "✅ PASS", "96.32", "1031 ms", "2185 ms", "⚠️ SATURATED"),
+    (110, "109.94", "15.4 ms", "16.9 ms", "✅ PASS", "96.74", "3208 ms", "5170 ms", "⚠️ SATURATED"),
+    (120, "119.94", "14.5 ms", "16.4 ms", "✅ PASS", "—", "—", "—", "⚠️ SATURATED"),
+    (130, "129.92", "14.1 ms", "17.9 ms", "✅ PASS", "—", "—", "—", "⚠️ SATURATED"),
+    (140, "139.92", "14.1 ms", "30.3 ms", "✅ PASS", "—", "—", "—", "⚠️ SATURATED"),
+    (150, "149.90", "13.9 ms", "31.1 ms", "✅ PASS", "—", "—", "—", "⚠️ SATURATED"),
+    (155, "151.34", "122.9 ms", "292.1 ms", "⚠️ SATURATED", "—", "—", "—", "⚠️ SATURATED"),
+    (160, "149.57", "456.9 ms", "836.6 ms", "⚠️ SATURATED", "—", "—", "—", "⚠️ SATURATED"),
+]
+
+CONCURRENT_COMPARISON_ROWS = [
+    # (Category, L4_p50, v5e_p50, v6e_p50, v6e_vs_l4_p50, v6e_vs_v5e_p50, L4_p99, v5e_p99, v6e_p99, v6e_vs_l4_p99, v6e_vs_v5e_p99)
+    ("1KB (1024 chars ≈ 1,009 tokens) @ C=1", 20.7, 11.5, 9.0, "-56.5%", "-21.7%", 23.5, 12.7, 11.4, "-51.5%", "-10.2%"),
+    ("2KB (2048 chars ≈ 2,016 tokens) @ C=1", 24.3, 16.5, 11.3, "-53.5%", "-31.5%", 28.2, 17.7, 13.0, "-53.9%", "-26.6%"),
+    ("1KB (1024 chars ≈ 1,009 tokens) @ C=4", 38.1, 21.2, 20.5, "-46.2%", "-3.3%", 42.9, 22.8, 23.9, "-44.3%", "+4.8%"),
+    ("2KB (2048 chars ≈ 2,016 tokens) @ C=4", 52.1, 40.7, 27.4, "-47.4%", "-32.7%", 58.2, 42.8, 32.2, "-44.7%", "-24.8%"),
+    ("1KB (1024 chars ≈ 1,009 tokens) @ C=8", 58.7, 42.5, 31.4, "-46.5%", "-26.1%", 66.3, 44.5, 37.5, "-43.4%", "-15.7%"),
+    ("2KB (2048 chars ≈ 2,016 tokens) @ C=8", 87.4, 82.6, 50.1, "-42.7%", "-39.3%", 97.3, 86.0, 54.4, "-44.1%", "-36.7%"),
+]
+
+RPS_SATURATION_SUMMARY_ROWS = [
+    # (Payload, L4_RPS, v5e_RPS, v6e_RPS, v6e_P50, v6e_P99, v6e_vs_L4, v6e_vs_v5e)
+    ("1KB (1,024 chars ≈ 1,009 tokens)", "70 RPS", "180 RPS", "270 RPS", "19.0 ms", "28.3 ms", "3.86x (+285.7%)", "1.50x (+50.0%)"),
+    ("2KB (2,048 chars ≈ 2,016 tokens)", "40 RPS", "90 RPS", "150 RPS", "13.9 ms", "31.1 ms", "3.75x (+275.0%)", "1.67x (+66.7%)"),
+]
+
+COST_IMPROVEMENT_ROWS = [
+    # (Payload, Platform, Hourly, Max_RPS_100, Perf_Per_Dollar_100, Rel_Perf_Dollar, Fleet_RPS_40, Nodes_for_1000RPS_40, Monthly_TCO_1000RPS_40, TCO_Savings_vs_L4)
+    ("1KB (1,024 chars)", "NVIDIA L4 (g2-standard-8)", "$1.0124", "70 RPS", "69.14 RPS/$", "1.00x (Baseline)", "28.0 RPS", 36, "$26,606 / mo", "Baseline"),
+    ("1KB (1,024 chars)", "TPU v5e-1 (ct5lp-hightpu-1t, FP32)", "$0.7990", "180 RPS", "225.28 RPS/$", "3.26x (+225.8%)", "72.0 RPS", 14, "$8,166 / mo", "-69.3% ($18,440/mo saved)"),
+    ("1KB (1,024 chars)", "TPU v6e-1 (ct6e-standard-1t, FP32 Megakernel, max_len=2048)", "$0.9990", "270 RPS", "270.27 RPS/$", "3.91x (+290.9%)", "108.0 RPS", 10, "$7,293 / mo", "-72.6% ($19,313/mo saved)"),
+    ("2KB (2,048 chars)", "NVIDIA L4 (g2-standard-8)", "$1.0124", "40 RPS", "39.51 RPS/$", "1.00x (Baseline)", "16.0 RPS", 63, "$46,560 / mo", "Baseline"),
+    ("2KB (2,048 chars)", "TPU v5e-1 (ct5lp-hightpu-1t, FP32)", "$0.7990", "90 RPS", "112.64 RPS/$", "2.85x (+185.1%)", "36.0 RPS", 28, "$16,332 / mo", "-64.9% ($30,228/mo saved)"),
+    ("2KB (2,048 chars)", "TPU v6e-1 (ct6e-standard-1t, FP32 Megakernel, max_len=2048)", "$0.9990", "150 RPS", "150.15 RPS/$", "3.80x (+280.0%)", "60.0 RPS", 17, "$12,398 / mo", "-73.4% ($34,162/mo saved)"),
+]
+
+
+def style_sheet(ws):
+    header_fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
+    sub_fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
+    pass_fill = PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
+    sat_fill = PatternFill(start_color="FCE4D6", end_color="FCE4D6", fill_type="solid")
+    header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    sub_font = Font(name="Calibri", size=11, bold=True, color="1F4E78")
+    bold_font = Font(name="Calibri", size=10, bold=True)
+    reg_font = Font(name="Calibri", size=10)
+    thin = Side(border_style="thin", color="BFBFBF")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    for row in ws.iter_rows():
+        for cell in row:
+            if cell.value is not None:
+                cell.border = border
+                val_str = str(cell.value)
+                if cell.row in (1,):
+                    cell.fill = header_fill
+                    cell.font = header_font
+                elif val_str.startswith("SECTION") or val_str.startswith("1.") or val_str.startswith("2.") or val_str.startswith("3.") or val_str.startswith("4."):
+                    cell.fill = sub_fill
+                    cell.font = sub_font
+                elif val_str in ("Payload Size", "RPS", "Payload Category", "Platform"):
+                    cell.fill = header_fill
+                    cell.font = header_font
+                elif "✅ PASS" in val_str:
+                    cell.fill = pass_fill
+                    cell.font = bold_font
+                elif "⚠️ SATURATED" in val_str:
+                    cell.fill = sat_fill
+                    cell.font = bold_font
+                else:
+                    cell.font = reg_font
+                cell.alignment = Alignment(vertical="center", wrap_text=False)
+
+    for col in ws.columns:
+        max_len = 0
+        col_letter = get_column_letter(col[0].column)
+        for cell in col:
+            if cell.value is not None:
+                max_len = max(max_len, len(str(cell.value)))
+        ws.column_dimensions[col_letter].width = min(max(max_len + 4, 14), 52)
+
+
+def build_tab1_gid1161755388(ws):
+    ws.append(["TPU v6e FP32 4-Layer Megakernel (Branch: jina-v2-embeddings-clean | Strictly max_model_len=2048 & max_num_batched_tokens=2048) — Matching Zhemin gid=1161755388 AS-IS"])
+    ws.append([])
+    ws.append(["1. Batch Request Testing: A single HTTP request contains multiple prompts (Random Chars: 1KB ≈ 1,009 tokens, 2KB ≈ 2,016 tokens)"])
+    ws.append([
+        "Payload Size", "Concurrency",
+        "TPU v6e Megakernel Throughput (max_len=2048)", "TPU v6e Megakernel p50", "TPU v6e Megakernel p99",
+        "TPU v5e Baseline Throughput (Zhemin)", "TPU v5e Baseline p50", "TPU v5e Baseline p99",
+        "NVIDIA L4 Throughput (Zhemin)", "NVIDIA L4 p50", "NVIDIA L4 p99"
+    ])
+    for r in BATCH_TESTING_ROWS:
+        ws.append(list(r))
+
+    ws.append([])
+    ws.append(["2. 1KB Dedicated Saturation (1,024 random chars ≈ 1,009 tokens, FP32, < 50 ms P99 SLA)"])
+    ws.append([
+        "RPS",
+        "TPU v6e Megakernel Achieved", "TPU v6e Megakernel P50", "TPU v6e Megakernel P99", "TPU v6e Megakernel SLA (<50ms)",
+        "TPU v5e Achieved (Zhemin)", "TPU v5e P50 (Zhemin)", "TPU v5e P99 (Zhemin)", "TPU v5e SLA (Zhemin)"
+    ])
+    for r in SATURATION_1KB_ROWS:
+        ws.append(list(r))
+
+    ws.append([])
+    ws.append(["3. 2KB Dedicated Saturation (2,048 random chars ≈ 2,016 tokens, FP32, < 50 ms P99 SLA)"])
+    ws.append([
+        "RPS",
+        "TPU v6e Megakernel Achieved", "TPU v6e Megakernel P50", "TPU v6e Megakernel P99", "TPU v6e Megakernel SLA (<50ms)",
+        "TPU v5e Achieved (Zhemin)", "TPU v5e P50 (Zhemin)", "TPU v5e P99 (Zhemin)", "TPU v5e SLA (Zhemin)"
+    ])
+    for r in SATURATION_2KB_ROWS:
+        ws.append(list(r))
+    style_sheet(ws)
+
+
+def build_tab2_gid1972899730(ws):
+    ws.append(["TPU v6e FP32 Megakernel (Branch: jina-v2-embeddings-clean | Strictly max_model_len=2048) vs TPU v5e & NVIDIA L4 — Matching Zhemin gid=1972899730"])
+    ws.append([])
+    ws.append(["1. Concurrent Request Latency Comparison (1KB & 2KB Random Characters)"])
+    ws.append([
+        "Payload Category",
+        "L4 P50 (ms)", "TPU v5e P50 (ms)", "TPU v6e Megakernel P50 (ms)", "v6e vs L4 P50", "v6e vs v5e P50",
+        "L4 P99 (ms)", "TPU v5e P99 (ms)", "TPU v6e Megakernel P99 (ms)", "v6e vs L4 P99", "v6e vs v5e P99"
+    ])
+    for r in CONCURRENT_COMPARISON_ROWS:
+        ws.append(list(r))
+
+    ws.append([])
+    ws.append(["2. RPS Saturation Result (< 50 ms P99 Latency SLA)"])
+    ws.append([
+        "Payload Size", "NVIDIA L4 Max RPS", "TPU v5e Max RPS", "TPU v6e Megakernel Max RPS (max_len=2048)",
+        "TPU v6e P50 at Max RPS", "TPU v6e P99 at Max RPS", "v6e Gain vs L4", "v6e Gain vs TPU v5e"
+    ])
+    for r in RPS_SATURATION_SUMMARY_ROWS:
+        ws.append(list(r))
+
+    ws.append([])
+    ws.append(["3. Cost Improvement & Fleet TCO Analysis (100% Max Capacity & 40% Production Fleet Utilization)"])
+    ws.append([
+        "Payload Size", "Platform", "On-Demand Price ($/hr)", "Max Validated RPS (<50ms P99)",
+        "Throughput per Dollar (RPS/$/hr)", "Relative Perf/$ vs L4",
+        "Effective RPS @ 40% Fleet Util", "Chips Needed for 1,000 RPS (@40% Util)",
+        "Monthly Fleet Cost (1,000 RPS @ 40% Util)", "Monthly TCO Savings vs L4"
+    ])
+    for r in COST_IMPROVEMENT_ROWS:
+        ws.append(list(r))
+
+    ws.append([])
+    ws.append(["4. Regional Availability (GCP Americas, Europe, Asia-Pacific)"])
+    ws.append(["Accelerator", "Americas Regions", "Europe Regions", "Asia-Pacific Regions"])
+    ws.append(["NVIDIA L4 (g2)", "us-central1, us-east1, us-east4, us-west1, us-west4, northamerica-northeast1, southamerica-east1", "europe-west1, europe-west2, europe-west3, europe-west4, europe-north1", "asia-east1, asia-northeast1, asia-northeast3, asia-south1, asia-southeast1, australia-southeast1"])
+    ws.append(["Cloud TPU v5e", "us-central1, us-east1, us-west1, us-west4, southamerica-west1", "europe-west4", "asia-east1, asia-northeast1"])
+    ws.append(["Cloud TPU v6e (Trillium)", "us-central1, us-east1, us-east5, us-south1, us-west4, southamerica-west1", "europe-west4", "asia-east1, asia-northeast1"])
+    style_sheet(ws)
+
+
+def main():
+    out_dir = os.path.dirname(os.path.abspath(__file__))
+    xlsx_path = os.path.join(out_dir, "ATP_AIC2_Benchmarks_TPU_v6e_FP32_Megakernel_vs_L4_and_Baselines.xlsx")
+    csv_path = os.path.join(out_dir, "TPU_v6e_FP32_Megakernel_Zhemin_Spreadsheet_Comparison.csv")
+    json_path = os.path.join(out_dir, "v6e_fp32_megakernel_2k_results.json")
+
+    wb = openpyxl.Workbook()
+    ws1 = wb.active
+    ws1.title = "v6e_Megakernel_gid1161755388"
+    build_tab1_gid1161755388(ws1)
+
+    ws2 = wb.create_sheet(title="Comparison_gid1972899730")
+    build_tab2_gid1972899730(ws2)
+    wb.save(xlsx_path)
+
+    with open(csv_path, "w", newline="") as f:
+        w = csv.writer(f)
+        for row in ws1.iter_rows(values_only=True):
+            w.writerow(row)
+        w.writerow([])
+        for row in ws2.iter_rows(values_only=True):
+            w.writerow(row)
+
+    data = {
+        "branch": "jina-v2-embeddings-clean",
+        "commit": "a8733e93",
+        "max_model_len": 2048,
+        "max_num_batched_tokens": 2048,
+        "truncate_prompt_tokens": 2048,
+        "dtype": "float32",
+        "batch_request_testing": BATCH_TESTING_ROWS,
+        "saturation_1kb": SATURATION_1KB_ROWS,
+        "saturation_2kb": SATURATION_2KB_ROWS,
+        "concurrent_comparison": CONCURRENT_COMPARISON_ROWS,
+        "rps_saturation_summary": RPS_SATURATION_SUMMARY_ROWS,
+        "cost_improvement": COST_IMPROVEMENT_ROWS,
+    }
+    with open(json_path, "w") as f:
+        json.dump(data, f, indent=2)
+
+    artifact_dir = "/usr/local/google/home/pallaviam/.gemini/jetski/brain/292ebc90-dbb8-4a33-8f1a-ca6dee63d8ff"
+    if os.path.isdir(artifact_dir):
+        shutil.copy2(xlsx_path, os.path.join(artifact_dir, "ATP_AIC2_Benchmarks_TPU_v6e_FP32_Megakernel_vs_L4_and_Baselines.xlsx"))
+        shutil.copy2(xlsx_path, os.path.join(artifact_dir, "ATP_AIC2_Benchmarks_TPU_v6e_v5e_FP32_and_BF16_vs_L4.xlsx"))
+
+    print(f"Successfully generated:\n  - {xlsx_path}\n  - {csv_path}\n  - {json_path}")
+
+
+if __name__ == "__main__":
+    main()

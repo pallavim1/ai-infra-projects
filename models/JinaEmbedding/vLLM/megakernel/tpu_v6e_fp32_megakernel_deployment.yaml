@@ -196,15 +196,15 @@ data:
     echo "=== [1/5] Installing git and essential build tools ==="
     apt-get update && apt-get install -y git curl build-essential procps
 
-    echo "=== [2/5] Cloning tpu-inference repo (branch: jina-v2-alibi-kernel with 4-Layer Fused Megakernel) ==="
+    echo "=== [2/5] Cloning tpu-inference repo (branch: jina-v2-embeddings-clean with 4-Layer Fused Megakernel) ==="
     mkdir -p /workspace && cd /workspace
     if [ ! -d "tpu-inference" ]; then
         git clone https://github.com/pallavim1/tpu-inference.git
     fi
     cd tpu-inference
     git fetch origin
-    git checkout jina-v2-alibi-kernel
-    git pull origin jina-v2-alibi-kernel
+    git checkout jina-v2-embeddings-clean
+    git pull origin jina-v2-embeddings-clean
 
     echo "=== [3/5] Installing vllm-tpu stack and editable Megakernel overlay ==="
     python3 -m pip install --upgrade pip
@@ -228,7 +228,7 @@ data:
             --max-model-len 2048 \
             --dtype float32 \
             --max-num-seqs=40 \
-            --max-num-batched-tokens 8192 \
+            --max-num-batched-tokens 2048 \
             --host 127.0.0.1 \
             --port 8001 || true
         echo "vllm serve exited; restarting in 3s..."
