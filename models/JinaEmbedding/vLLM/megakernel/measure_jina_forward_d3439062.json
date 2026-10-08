@@ -1,0 +1,694 @@
+{
+  "model": "jinaai/jina-embeddings-v2-small-en",
+  "device": "TPU v6 lite",
+  "versions": {
+    "jax": "0.11.0",
+    "python": "3.12.14",
+    "jaxlib": "0.11.0",
+    "libtpu": "0.0.44",
+    "vllm-tpu": "0.26.0",
+    "torch": "2.10.0",
+    "torchax": "0.0.13"
+  },
+  "git_commit": "d34390621876658cc7d6adc5b5fb5681eb105639",
+  "runs": 200,
+  "warmup": 20,
+  "forward": [
+    {
+      "path": "megakernel",
+      "version": "v1",
+      "precision": "default",
+      "case": "1x1024",
+      "num_tokens": 1024,
+      "seq_lens": [
+        1024
+      ],
+      "median_ms": 0.4427,
+      "p90_ms": 0.4593,
+      "mean_ms": 0.4458,
+      "min_ms": 0.4262,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v1",
+      "precision": "default",
+      "case": "2x1024",
+      "num_tokens": 2048,
+      "seq_lens": [
+        1024,
+        1024
+      ],
+      "median_ms": 0.6641,
+      "p90_ms": 0.6772,
+      "mean_ms": 0.6657,
+      "min_ms": 0.6438,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v1",
+      "precision": "default",
+      "case": "1x2048",
+      "num_tokens": 2048,
+      "seq_lens": [
+        2048
+      ],
+      "median_ms": 0.8507,
+      "p90_ms": 0.8638,
+      "mean_ms": 0.8522,
+      "min_ms": 0.8305,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v2",
+      "precision": "default",
+      "case": "1x1024",
+      "num_tokens": 1024,
+      "seq_lens": [
+        1024
+      ],
+      "median_ms": 0.4258,
+      "p90_ms": 0.4375,
+      "mean_ms": 0.4266,
+      "min_ms": 0.4023,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v2",
+      "precision": "default",
+      "case": "2x1024",
+      "num_tokens": 2048,
+      "seq_lens": [
+        1024,
+        1024
+      ],
+      "median_ms": 0.6225,
+      "p90_ms": 0.6382,
+      "mean_ms": 0.6244,
+      "min_ms": 0.5981,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v2",
+      "precision": "default",
+      "case": "1x2048",
+      "num_tokens": 2048,
+      "seq_lens": [
+        2048
+      ],
+      "median_ms": 0.752,
+      "p90_ms": 0.7652,
+      "mean_ms": 0.7532,
+      "min_ms": 0.7363,
+      "runs": 200
+    },
+    {
+      "path": "xla",
+      "version": null,
+      "precision": "default",
+      "case": "1x1024",
+      "num_tokens": 1024,
+      "seq_lens": [
+        1024
+      ],
+      "median_ms": 1.3355,
+      "p90_ms": 1.348,
+      "mean_ms": 1.3375,
+      "min_ms": 1.3191,
+      "runs": 200
+    },
+    {
+      "path": "xla",
+      "version": null,
+      "precision": "default",
+      "case": "2x1024",
+      "num_tokens": 2048,
+      "seq_lens": [
+        1024,
+        1024
+      ],
+      "median_ms": 5.3492,
+      "p90_ms": 5.376,
+      "mean_ms": 5.3529,
+      "min_ms": 5.3236,
+      "runs": 200
+    },
+    {
+      "path": "xla",
+      "version": null,
+      "precision": "default",
+      "case": "1x2048",
+      "num_tokens": 2048,
+      "seq_lens": [
+        2048
+      ],
+      "median_ms": 5.3477,
+      "p90_ms": 5.3696,
+      "mean_ms": 5.3502,
+      "min_ms": 5.3171,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v1",
+      "precision": "highest",
+      "case": "1x1024",
+      "num_tokens": 1024,
+      "seq_lens": [
+        1024
+      ],
+      "median_ms": 0.893,
+      "p90_ms": 0.9094,
+      "mean_ms": 0.8953,
+      "min_ms": 0.8747,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v1",
+      "precision": "highest",
+      "case": "2x1024",
+      "num_tokens": 2048,
+      "seq_lens": [
+        1024,
+        1024
+      ],
+      "median_ms": 1.5328,
+      "p90_ms": 1.5668,
+      "mean_ms": 1.5395,
+      "min_ms": 1.5087,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v1",
+      "precision": "highest",
+      "case": "1x2048",
+      "num_tokens": 2048,
+      "seq_lens": [
+        2048
+      ],
+      "median_ms": 2.1946,
+      "p90_ms": 2.2091,
+      "mean_ms": 2.1957,
+      "min_ms": 2.1717,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v2",
+      "precision": "highest",
+      "case": "1x1024",
+      "num_tokens": 1024,
+      "seq_lens": [
+        1024
+      ],
+      "median_ms": 0.8337,
+      "p90_ms": 0.8611,
+      "mean_ms": 0.8362,
+      "min_ms": 0.7998,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v2",
+      "precision": "highest",
+      "case": "2x1024",
+      "num_tokens": 2048,
+      "seq_lens": [
+        1024,
+        1024
+      ],
+      "median_ms": 1.3929,
+      "p90_ms": 1.4139,
+      "mean_ms": 1.3968,
+      "min_ms": 1.3769,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v2",
+      "precision": "highest",
+      "case": "1x2048",
+      "num_tokens": 2048,
+      "seq_lens": [
+        2048
+      ],
+      "median_ms": 1.9444,
+      "p90_ms": 1.9643,
+      "mean_ms": 1.9473,
+      "min_ms": 1.9226,
+      "runs": 200
+    },
+    {
+      "path": "xla",
+      "version": null,
+      "precision": "highest",
+      "case": "1x1024",
+      "num_tokens": 1024,
+      "seq_lens": [
+        1024
+      ],
+      "median_ms": 1.9887,
+      "p90_ms": 2.004,
+      "mean_ms": 1.9898,
+      "min_ms": 1.9599,
+      "runs": 200
+    },
+    {
+      "path": "xla",
+      "version": null,
+      "precision": "highest",
+      "case": "2x1024",
+      "num_tokens": 2048,
+      "seq_lens": [
+        1024,
+        1024
+      ],
+      "median_ms": 6.7734,
+      "p90_ms": 6.7947,
+      "mean_ms": 6.7741,
+      "min_ms": 6.7399,
+      "runs": 200
+    },
+    {
+      "path": "xla",
+      "version": null,
+      "precision": "highest",
+      "case": "1x2048",
+      "num_tokens": 2048,
+      "seq_lens": [
+        2048
+      ],
+      "median_ms": 6.7802,
+      "p90_ms": 6.8074,
+      "mean_ms": 6.7833,
+      "min_ms": 6.7467,
+      "runs": 200
+    }
+  ],
+  "step": [
+    {
+      "path": "megakernel",
+      "version": "v1",
+      "precision": "default",
+      "case": "1x1024",
+      "num_tokens": 1024,
+      "seq_lens": [
+        1024
+      ],
+      "pooling": "old",
+      "median_ms": 2.6871,
+      "p90_ms": 2.7978,
+      "mean_ms": 2.7219,
+      "min_ms": 2.6025,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v1",
+      "precision": "default",
+      "case": "1x1024",
+      "num_tokens": 1024,
+      "seq_lens": [
+        1024
+      ],
+      "pooling": "fast",
+      "median_ms": 1.6065,
+      "p90_ms": 1.6404,
+      "mean_ms": 1.612,
+      "min_ms": 1.5648,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v1",
+      "precision": "default",
+      "case": "1x1024",
+      "num_tokens": 1024,
+      "seq_lens": [
+        1024
+      ],
+      "pooling": "device",
+      "median_ms": 0.6013,
+      "p90_ms": 0.6204,
+      "mean_ms": 0.6035,
+      "min_ms": 0.5788,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v1",
+      "precision": "default",
+      "case": "1x1024",
+      "num_tokens": 1024,
+      "seq_lens": [
+        1024
+      ],
+      "pooling": "fused",
+      "median_ms": 0.6572,
+      "p90_ms": 0.6793,
+      "mean_ms": 0.6585,
+      "min_ms": 0.6299,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v1",
+      "precision": "default",
+      "case": "2x1024",
+      "num_tokens": 2048,
+      "seq_lens": [
+        1024,
+        1024
+      ],
+      "pooling": "old",
+      "median_ms": 3.2929,
+      "p90_ms": 3.4478,
+      "mean_ms": 3.2874,
+      "min_ms": 3.0288,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v1",
+      "precision": "default",
+      "case": "2x1024",
+      "num_tokens": 2048,
+      "seq_lens": [
+        1024,
+        1024
+      ],
+      "pooling": "fast",
+      "median_ms": 2.3136,
+      "p90_ms": 2.343,
+      "mean_ms": 2.3144,
+      "min_ms": 2.1711,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v1",
+      "precision": "default",
+      "case": "2x1024",
+      "num_tokens": 2048,
+      "seq_lens": [
+        1024,
+        1024
+      ],
+      "pooling": "device",
+      "median_ms": 0.8268,
+      "p90_ms": 0.8411,
+      "mean_ms": 0.8275,
+      "min_ms": 0.802,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v1",
+      "precision": "default",
+      "case": "2x1024",
+      "num_tokens": 2048,
+      "seq_lens": [
+        1024,
+        1024
+      ],
+      "pooling": "fused",
+      "median_ms": 0.8663,
+      "p90_ms": 0.8923,
+      "mean_ms": 0.8716,
+      "min_ms": 0.8346,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v1",
+      "precision": "default",
+      "case": "1x2048",
+      "num_tokens": 2048,
+      "seq_lens": [
+        2048
+      ],
+      "pooling": "old",
+      "median_ms": 3.5053,
+      "p90_ms": 3.6353,
+      "mean_ms": 3.5364,
+      "min_ms": 3.425,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v1",
+      "precision": "default",
+      "case": "1x2048",
+      "num_tokens": 2048,
+      "seq_lens": [
+        2048
+      ],
+      "pooling": "fast",
+      "median_ms": 2.2505,
+      "p90_ms": 2.287,
+      "mean_ms": 2.2572,
+      "min_ms": 2.2004,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v1",
+      "precision": "default",
+      "case": "1x2048",
+      "num_tokens": 2048,
+      "seq_lens": [
+        2048
+      ],
+      "pooling": "device",
+      "median_ms": 1.0306,
+      "p90_ms": 1.0502,
+      "mean_ms": 1.033,
+      "min_ms": 1.0071,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v1",
+      "precision": "default",
+      "case": "1x2048",
+      "num_tokens": 2048,
+      "seq_lens": [
+        2048
+      ],
+      "pooling": "fused",
+      "median_ms": 1.0742,
+      "p90_ms": 1.1062,
+      "mean_ms": 1.0836,
+      "min_ms": 1.0455,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v2",
+      "precision": "default",
+      "case": "1x1024",
+      "num_tokens": 1024,
+      "seq_lens": [
+        1024
+      ],
+      "pooling": "old",
+      "median_ms": 2.9157,
+      "p90_ms": 3.0504,
+      "mean_ms": 2.9465,
+      "min_ms": 2.8318,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v2",
+      "precision": "default",
+      "case": "1x1024",
+      "num_tokens": 1024,
+      "seq_lens": [
+        1024
+      ],
+      "pooling": "fast",
+      "median_ms": 1.7212,
+      "p90_ms": 1.7465,
+      "mean_ms": 1.7248,
+      "min_ms": 1.6735,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v2",
+      "precision": "default",
+      "case": "1x1024",
+      "num_tokens": 1024,
+      "seq_lens": [
+        1024
+      ],
+      "pooling": "device",
+      "median_ms": 0.5837,
+      "p90_ms": 0.6035,
+      "mean_ms": 0.5852,
+      "min_ms": 0.5605,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v2",
+      "precision": "default",
+      "case": "1x1024",
+      "num_tokens": 1024,
+      "seq_lens": [
+        1024
+      ],
+      "pooling": "fused",
+      "median_ms": 0.6502,
+      "p90_ms": 0.6733,
+      "mean_ms": 0.6539,
+      "min_ms": 0.621,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v2",
+      "precision": "default",
+      "case": "2x1024",
+      "num_tokens": 2048,
+      "seq_lens": [
+        1024,
+        1024
+      ],
+      "pooling": "old",
+      "median_ms": 2.9606,
+      "p90_ms": 3.0913,
+      "mean_ms": 2.9992,
+      "min_ms": 2.8965,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v2",
+      "precision": "default",
+      "case": "2x1024",
+      "num_tokens": 2048,
+      "seq_lens": [
+        1024,
+        1024
+      ],
+      "pooling": "fast",
+      "median_ms": 1.954,
+      "p90_ms": 1.9768,
+      "mean_ms": 1.9553,
+      "min_ms": 1.9075,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v2",
+      "precision": "default",
+      "case": "2x1024",
+      "num_tokens": 2048,
+      "seq_lens": [
+        1024,
+        1024
+      ],
+      "pooling": "device",
+      "median_ms": 0.7853,
+      "p90_ms": 0.8093,
+      "mean_ms": 0.8081,
+      "min_ms": 0.75,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v2",
+      "precision": "default",
+      "case": "2x1024",
+      "num_tokens": 2048,
+      "seq_lens": [
+        1024,
+        1024
+      ],
+      "pooling": "fused",
+      "median_ms": 0.813,
+      "p90_ms": 0.837,
+      "mean_ms": 0.8154,
+      "min_ms": 0.7845,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v2",
+      "precision": "default",
+      "case": "1x2048",
+      "num_tokens": 2048,
+      "seq_lens": [
+        2048
+      ],
+      "pooling": "old",
+      "median_ms": 3.1695,
+      "p90_ms": 3.2944,
+      "mean_ms": 3.1952,
+      "min_ms": 3.0869,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v2",
+      "precision": "default",
+      "case": "1x2048",
+      "num_tokens": 2048,
+      "seq_lens": [
+        2048
+      ],
+      "pooling": "fast",
+      "median_ms": 2.0951,
+      "p90_ms": 2.1301,
+      "mean_ms": 2.1041,
+      "min_ms": 2.0615,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v2",
+      "precision": "default",
+      "case": "1x2048",
+      "num_tokens": 2048,
+      "seq_lens": [
+        2048
+      ],
+      "pooling": "device",
+      "median_ms": 0.921,
+      "p90_ms": 0.9402,
+      "mean_ms": 0.9228,
+      "min_ms": 0.8958,
+      "runs": 200
+    },
+    {
+      "path": "megakernel",
+      "version": "v2",
+      "precision": "default",
+      "case": "1x2048",
+      "num_tokens": 2048,
+      "seq_lens": [
+        2048
+      ],
+      "pooling": "fused",
+      "median_ms": 0.9595,
+      "p90_ms": 0.9926,
+      "mean_ms": 0.9644,
+      "min_ms": 0.9333,
+      "runs": 200
+    }
+  ],
+  "trace_dir": null,
+  "notes": [
+    "forward = jitted embeddings + encoder of one engine step, dispatch to block_until_ready (wall clock).",
+    "step = forward + host copy + vLLM embed pooler (mean + normalize); pooling: old = under torchax modes (TPU_POOLING_FAST_PATH=0), fast = plain torch, device = separate device mean pooling (JINA_BERT_DEVICE_POOLING=1, JINA_BERT_FUSED_POOLING=0), fused = mean + normalize fused into forward XLA executable (default).",
+    "xla/highest = jax.default_matmul_precision('highest') for the XLA matmuls; the Pallas flash-attention kernel is unchanged."
+  ]
+}

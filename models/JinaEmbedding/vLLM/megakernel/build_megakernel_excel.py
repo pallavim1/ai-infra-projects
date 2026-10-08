@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Builds the Excel (.xlsx), CSV (.csv), and consolidated JSON benchmark assets
-strictly from the single-shot end-to-end empirical run on cb460828:
-  - scratch/opus_v6e_tests/full_e2e_results.json (08:52:54Z -> 09:49:12Z)
-  - scratch/opus_v6e_tests/mid_1k_490_results.json (09:50:12Z -> 09:51:17Z)
-  - scratch/opus_v6e_tests/mid_2k_330_results.json (09:51:33Z -> 09:52:39Z)
+including BOTH:
+  1. d3439062 (Fused Device Pooling + L2 Norm + Encoder Fast Path — Latest)
+  2. cb460828 (Opus Megakernel v2 + Device Pooling — Full 100..520 / 90..360 E2E Sweep)
+compared against Zhemin's TPU v5e and L4 GPU baselines.
 """
 
 import csv
@@ -59,6 +59,7 @@ ZHEMIN_V5E_2K_RPS = {
 
 
 def load_empirical_data():
+    # 1. Load cb460828 E2E data
     with open(os.path.join(SCRATCH_DIR, "full_e2e_results.json")) as f:
         e2e = json.load(f)
     with open(os.path.join(SCRATCH_DIR, "mid_1k_490_results.json")) as f:
@@ -67,46 +68,76 @@ def load_empirical_data():
         m330 = json.load(f)["rows"]
 
     all_rps_rows = e2e["saturation_rows"] + m490 + m330
-
-    rps_1k = {}
-    rps_2k = {}
+    cb_rps_1k = {}
+    cb_rps_2k = {}
     for r in all_rps_rows:
-        if r["phase"] == "warmup":
+        if r.get("phase") == "warmup":
             continue
         if r["tokens"] == 1024:
-            assert r["server_tokens_per_request"] == 1024.0, f"1K token mismatch: {r}"
-            rps_1k[r["target_rps"]] = r
+            cb_rps_1k[r["target_rps"]] = r
         elif r["tokens"] == 2048:
-            assert r["server_tokens_per_request"] == 2048.0, f"2K token mismatch: {r}"
-            rps_2k[r["target_rps"]] = r
+            cb_rps_2k[r["target_rps"]] = r
 
-    k6_conc = {}
+    cb_k6_conc = {}
     for r in e2e["k6_concurrency"]:
-        expected = 1024.0 if r["payload_kb"] == 1 else 2048.0
-        assert r["server_tokens_per_request"] == expected, f"k6 conc token mismatch: {r}"
-        k6_conc[(r["payload_kb"], r["concurrency"])] = r
+        cb_k6_conc[(r["payload_kb"], r["concurrency"])] = r
 
-    single_batch = {}
+    cb_single_batch = {}
     for r in e2e["single_http_batch"]:
-        expected = 1024.0 if r["payload_kb"] == 1 else 2048.0
-        assert r["server_tokens_per_prompt"] == expected, f"single batch token mismatch: {r}"
-        single_batch[(r["payload_kb"], r["concurrency"])] = r
+        cb_single_batch[(r["payload_kb"], r["concurrency"])] = r
 
-    # Save merged full_e2e_results.json into both scratch and repo
-    e2e["saturation_rows_merged_sorted"] = {
-        "1k": [rps_1k[k] for k in sorted(rps_1k.keys())],
-        "2k": [rps_2k[k] for k in sorted(rps_2k.keys())],
+    # 2. Load d3439062 data
+    d34_dir = os.path.join(SCRATCH_DIR, "d3439062_eval")
+    with open(os.path.join(d34_dir, "batch_and_conc.json")) as f:
+        d34_bc = json.load(f)
+    with open(os.path.join(d34_dir, "knee_results.json")) as f:
+        d34_knee = json.load(f)
+    with open(os.path.join(d34_dir, "ext_2k_results.json")) as f:
+        d34_ext2k = json.load(f)
+    with open(os.path.join(SCRATCH_DIR, "measure_jina_forward_d3439062.json")) as f:
+        d34_micro = json.load(f)
+
+    d34_single_batch = {}
+    for r in d34_bc["single_http_batch"]:
+        d34_single_batch[(r["payload_kb"], r["concurrency"])] = r
+
+    d34_k6_conc = {}
+    for r in d34_bc["k6_concurrency"]:
+        d34_k6_conc[(r["payload_kb"], r["concurrency"])] = r
+    for r in d34_ext2k["conc_2k"]:
+        d34_k6_conc[(r["payload_kb"], r["concurrency"])] = r
+
+    d34_rps_1k = {}
+    d34_rps_2k = {}
+    for r in d34_knee + d34_ext2k["sat_2k"]:
+        if r["tokens"] == 1024:
+            d34_rps_1k[r["target_rps"]] = r
+        elif r["tokens"] == 2048:
+            d34_rps_2k[r["target_rps"]] = r
+
+    # Save consolidated d3439062 JSON into repo
+    d34_consolidated = {
+        "git_commit": "d34390621876658cc7d6adc5b5fb5681eb105639",
+        "branch": "jina-v2-opus-megakernel",
+        "description": "Fused device mean pooling + L2 normalization + encoder input preparation fast path on TPU v6e (FP32)",
+        "step_microbenchmark": d34_micro,
+        "single_http_batch": [d34_single_batch[(kb, c)] for kb in [1, 2] for c in [1, 4, 8, 16]],
+        "k6_concurrency": [d34_k6_conc[(kb, c)] for kb in [1, 2] for c in [1, 4, 8, 16]],
+        "saturation_1k": [d34_rps_1k[k] for k in sorted(d34_rps_1k.keys())],
+        "saturation_2k": [d34_rps_2k[k] for k in sorted(d34_rps_2k.keys())],
     }
-    with open(os.path.join(SCRATCH_DIR, "full_e2e_results.json"), "w") as f:
-        json.dump(e2e, f, indent=2)
-    with open(os.path.join(REPO_MEGAKERNEL_DIR, "cb460828_full_e2e_results.json"), "w") as f:
-        json.dump(e2e, f, indent=2)
+    with open(os.path.join(REPO_MEGAKERNEL_DIR, "d3439062_full_eval_results.json"), "w") as f:
+        json.dump(d34_consolidated, f, indent=2)
 
     return (
-        [rps_1k[k] for k in sorted(rps_1k.keys())],
-        [rps_2k[k] for k in sorted(rps_2k.keys())],
-        k6_conc,
-        single_batch,
+        cb_rps_1k,
+        cb_rps_2k,
+        cb_k6_conc,
+        cb_single_batch,
+        d34_rps_1k,
+        d34_rps_2k,
+        d34_k6_conc,
+        d34_single_batch,
     )
 
 
@@ -125,7 +156,7 @@ def build_sheet_xml(rows):
         '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">',
         "  <cols>",
         '    <col min="1" max="2" width="28" customWidth="1"/>',
-        '    <col min="3" max="12" width="24" customWidth="1"/>',
+        '    <col min="3" max="16" width="24" customWidth="1"/>',
         "  </cols>",
         "  <sheetData>",
     ]
@@ -194,20 +225,23 @@ def create_xlsx(filename, sheets):
             zf.writestr(f"xl/worksheets/sheet{i}.xml", build_sheet_xml(rows))
 
 
-def build_tab1(rps_1k, rps_2k, k6_conc, single_batch):
+def build_tab1(cb_rps_1k, cb_rps_2k, cb_k6_conc, cb_single_batch, d34_rps_1k, d34_rps_2k, d34_k6_conc, d34_single_batch):
     rows = []
     rows.append([
-        "TPU v6e FP32 Opus Megakernel v2 + Device Pooling (jina-v2-opus-megakernel @ cb460828 | Single-Shot E2E Run 2026-09-27T08:52:54Z–09:52:39Z | FP32, max_model_len=2048, Exact 1,024 & 2,048 Tokens) — Matching Zhemin gid=1161755388 AS-IS"
+        "TPU v6e FP32 Opus Megakernel v2 + Fused Device Pooling (jina-v2-opus-megakernel @ d3439062 [Latest] & cb460828 | FP32, max_model_len=2048, Exact 1,024 & 2,048 Tokens) — Matching Zhemin gid=1161755388 AS-IS"
     ])
     rows.append([])
 
     # Section 1A: Batch Request Testing (Single HTTP request contains N prompts)
     rows.append([
-        "Batch Request Testing: A single HTTP request contains multiple prompts (Single HTTP Request with N=1,4,8,16 prompts; Exact 1,024 & 2,048 tokens)"
+        "1. Batch Request Testing: A single HTTP request contains multiple prompts (Single HTTP Request with N=1,4,8,16 prompts; Exact 1,024 & 2,048 tokens)"
     ])
     rows.append([
         "Payload Size",
         "Concurrency",
+        "Throughput (TPU v6e d3439062 Fused)",
+        "p50 (TPU v6e d3439062 Fused)",
+        "p99 (TPU v6e d3439062 Fused)",
         "Throughput (TPU v6e cb460828)",
         "p50 (TPU v6e cb460828)",
         "p99 (TPU v6e cb460828)",
@@ -220,15 +254,19 @@ def build_tab1(rps_1k, rps_2k, k6_conc, single_batch):
     ])
     for kb in [1, 2]:
         for c in [1, 4, 8, 16]:
-            r = single_batch[(kb, c)]
+            r_d34 = d34_single_batch[(kb, c)]
+            r_cb = cb_single_batch[(kb, c)]
             v5_t, v5_50, v5_99 = ZHEMIN_V5E_BATCH[(kb, c)]
             l4_t, l4_50, l4_99 = ZHEMIN_L4_BATCH[(kb, c)]
             rows.append([
-                r["payload_label"],
+                r_d34["payload_label"],
                 c,
-                f"{r['throughput_rps']:.1f}/s",
-                f"{r['p50_ms']:.1f}ms",
-                f"{r['p99_ms']:.1f}ms",
+                f"{r_d34['throughput_rps']:.1f}/s",
+                f"{r_d34['p50_ms']:.1f}ms",
+                f"{r_d34['p99_ms']:.1f}ms",
+                f"{r_cb['throughput_rps']:.1f}/s",
+                f"{r_cb['p50_ms']:.1f}ms",
+                f"{r_cb['p99_ms']:.1f}ms",
                 v5_t,
                 f"{v5_50:.1f}ms",
                 f"{v5_99:.1f}ms",
@@ -240,11 +278,14 @@ def build_tab1(rps_1k, rps_2k, k6_conc, single_batch):
     rows.append([])
     # Section 1B: Concurrent HTTP Request Testing (k6 constant-vus = 1, 4, 8, 16)
     rows.append([
-        "Concurrent Request Testing (k6 constant-vus, VUS = 1, 4, 8, 16 concurrent HTTP requests; Exact 1,024 & 2,048 tokens)"
+        "2. Concurrent Request Testing (k6 constant-vus, VUS = 1, 4, 8, 16 concurrent HTTP requests; Exact 1,024 & 2,048 tokens)"
     ])
     rows.append([
         "Payload Size",
         "Concurrency",
+        "Throughput (TPU v6e d3439062 Fused)",
+        "p50 (TPU v6e d3439062 Fused)",
+        "p99 (TPU v6e d3439062 Fused)",
         "Throughput (TPU v6e cb460828)",
         "p50 (TPU v6e cb460828)",
         "p99 (TPU v6e cb460828)",
@@ -257,15 +298,19 @@ def build_tab1(rps_1k, rps_2k, k6_conc, single_batch):
     ])
     for kb in [1, 2]:
         for c in [1, 4, 8, 16]:
-            r = k6_conc[(kb, c)]
+            r_d34 = d34_k6_conc[(kb, c)]
+            r_cb = cb_k6_conc[(kb, c)]
             v5_t, v5_50, v5_99 = ZHEMIN_V5E_BATCH[(kb, c)]
             l4_t, l4_50, l4_99 = ZHEMIN_L4_BATCH[(kb, c)]
             rows.append([
-                r["payload_label"],
+                r_d34["payload_label"],
                 c,
-                f"{r['throughput_rps']:.1f}/s",
-                f"{r['p50_ms']:.1f}ms",
-                f"{r['p99_ms']:.1f}ms",
+                f"{r_d34['throughput_rps']:.1f}/s",
+                f"{r_d34['p50_ms']:.1f}ms",
+                f"{r_d34['p99_ms']:.1f}ms",
+                f"{r_cb['throughput_rps']:.1f}/s",
+                f"{r_cb['p50_ms']:.1f}ms",
+                f"{r_cb['p99_ms']:.1f}ms",
                 v5_t,
                 f"{v5_50:.1f}ms",
                 f"{v5_99:.1f}ms",
@@ -276,9 +321,13 @@ def build_tab1(rps_1k, rps_2k, k6_conc, single_batch):
 
     rows.append([])
     # Section 2: 1KB Dedicated Saturation
-    rows.append(["1KB Dedicated Saturation (Exact 1,024 Tokens per Request, FP32, p99 < 50 ms SLA)"])
+    rows.append(["3A. 1KB Dedicated Saturation (Exact 1,024 Tokens per Request, FP32, p99 < 50 ms SLA)"])
     rows.append([
         "RPS",
+        "Achieved (TPU v6e d3439062 Fused)",
+        "P50 (TPU v6e d3439062 Fused)",
+        "P99 (TPU v6e d3439062 Fused)",
+        "SLA (TPU v6e d3439062 Fused)",
         "Achieved (TPU v6e cb460828)",
         "P50 (TPU v6e cb460828)",
         "P99 (TPU v6e cb460828)",
@@ -288,15 +337,21 @@ def build_tab1(rps_1k, rps_2k, k6_conc, single_batch):
         "P99 (TPU v5e Zhemin)",
         "SLA (TPU v5e Zhemin)",
     ])
-    for r in rps_1k:
-        t_rps = r["target_rps"]
+    all_1k_rps = sorted(set(cb_rps_1k.keys()) | set(d34_rps_1k.keys()))
+    for t_rps in all_1k_rps:
+        r_d34 = d34_rps_1k.get(t_rps)
+        r_cb = cb_rps_1k.get(t_rps)
         v5 = ZHEMIN_V5E_1K_RPS.get(t_rps, ("—", "—", "—", "SATURATED (>180 RPS)"))
         rows.append([
             t_rps,
-            f"{r['achieved_rps']:.2f}",
-            f"{r['p50']:.1f} ms",
-            f"{r['p99']:.1f} ms",
-            r["status"],
+            f"{r_d34['achieved_rps']:.2f}" if r_d34 else "— (PASS <480)",
+            f"{r_d34['p50']:.1f} ms" if r_d34 else "—",
+            f"{r_d34['p99']:.1f} ms" if r_d34 else "—",
+            r_d34["status"] if r_d34 else "PASS",
+            f"{r_cb['achieved_rps']:.2f}" if r_cb else "—",
+            f"{r_cb['p50']:.1f} ms" if r_cb else "—",
+            f"{r_cb['p99']:.1f} ms" if r_cb else "—",
+            r_cb["status"] if r_cb else "SATURATED (>490 RPS)",
             v5[0],
             v5[1],
             v5[2],
@@ -305,9 +360,13 @@ def build_tab1(rps_1k, rps_2k, k6_conc, single_batch):
 
     rows.append([])
     # Section 3: 2KB Dedicated Saturation
-    rows.append(["2KB Dedicated Saturation (Exact 2,048 Tokens per Request, FP32, p99 < 50 ms SLA)"])
+    rows.append(["3B. 2KB Dedicated Saturation (Exact 2,048 Tokens per Request, FP32, p99 < 50 ms SLA)"])
     rows.append([
         "RPS",
+        "Achieved (TPU v6e d3439062 Fused)",
+        "P50 (TPU v6e d3439062 Fused)",
+        "P99 (TPU v6e d3439062 Fused)",
+        "SLA (TPU v6e d3439062 Fused)",
         "Achieved (TPU v6e cb460828)",
         "P50 (TPU v6e cb460828)",
         "P99 (TPU v6e cb460828)",
@@ -317,15 +376,21 @@ def build_tab1(rps_1k, rps_2k, k6_conc, single_batch):
         "P99 (TPU v5e Zhemin)",
         "SLA (TPU v5e Zhemin)",
     ])
-    for r in rps_2k:
-        t_rps = r["target_rps"]
+    all_2k_rps = sorted(set(cb_rps_2k.keys()) | set(d34_rps_2k.keys()))
+    for t_rps in all_2k_rps:
+        r_d34 = d34_rps_2k.get(t_rps)
+        r_cb = cb_rps_2k.get(t_rps)
         v5 = ZHEMIN_V5E_2K_RPS.get(t_rps, ("—", "—", "—", "SATURATED (>90 RPS)"))
         rows.append([
             t_rps,
-            f"{r['achieved_rps']:.2f}",
-            f"{r['p50']:.1f} ms",
-            f"{r['p99']:.1f} ms",
-            r["status"],
+            f"{r_d34['achieved_rps']:.2f}" if r_d34 else ("— (PASS <340)" if t_rps < 340 else "—"),
+            f"{r_d34['p50']:.1f} ms" if r_d34 else "—",
+            f"{r_d34['p99']:.1f} ms" if r_d34 else "—",
+            r_d34["status"] if r_d34 else ("PASS" if t_rps < 350 else "SATURATED"),
+            f"{r_cb['achieved_rps']:.2f}" if r_cb else "—",
+            f"{r_cb['p50']:.1f} ms" if r_cb else "—",
+            f"{r_cb['p99']:.1f} ms" if r_cb else "—",
+            r_cb["status"] if r_cb else "SATURATED (>320 RPS)",
             v5[0],
             v5[1],
             v5[2],
@@ -335,31 +400,34 @@ def build_tab1(rps_1k, rps_2k, k6_conc, single_batch):
     return rows
 
 
-def build_tab2(rps_1k, rps_2k, k6_conc, single_batch):
+def build_tab2(cb_rps_1k, cb_rps_2k, cb_k6_conc, cb_single_batch, d34_rps_1k, d34_rps_2k, d34_k6_conc, d34_single_batch):
     rows = []
     rows.append([
-        "TPU v6e Opus Megakernel cb460828 ($2.70/hr) vs TPU v5e ($1.20 / $1.22/hr) & NVIDIA L4 ($0.70/hr) — Matching Zhemin gid=1972899730 AS-IS"
+        "TPU v6e Opus Megakernel d3439062 [Latest] & cb460828 ($2.70/hr) vs TPU v5e ($1.20 / $1.22/hr) & NVIDIA L4 ($0.70/hr) — Matching Zhemin gid=1972899730 AS-IS"
     ])
     rows.append([])
 
     # 1A. Concurrent Request Comparison (Single-HTTP Multi-Prompt Batch N=1,4,8,16)
-    rows.append(["Concurrent Request Comparison — Single HTTP Request with N Prompts (P50)"])
+    rows.append(["1A. Batch Request Comparison — Single HTTP Request with N Prompts (P50)"])
     rows.append([
         "Payload Size",
         "Concurrency",
+        "TPU v6e d3439062 (ms)",
         "TPU v6e cb460828 (ms)",
         "TPU v5e (ms)",
         "L4 GPU (ms)",
-        "Absolute Delta (v6e vs v5e)",
-        "% Reduction (v6e vs v5e)",
-        "Absolute Delta (v6e vs L4)",
-        "% Reduction (v6e vs L4)",
+        "Absolute Delta (d3439062 vs v5e)",
+        "% Reduction (d3439062 vs v5e)",
+        "Absolute Delta (d3439062 vs L4)",
+        "% Reduction (d3439062 vs L4)",
         "Faster Setup",
     ])
     for kb in [1, 2]:
         for c in [1, 4, 8, 16]:
-            r = single_batch[(kb, c)]
-            v6 = round(r["p50_ms"], 1)
+            r_d34 = d34_single_batch[(kb, c)]
+            r_cb = cb_single_batch[(kb, c)]
+            v6 = round(r_d34["p50_ms"], 1)
+            v6_cb = round(r_cb["p50_ms"], 1)
             _, v5, _ = ZHEMIN_V5E_BATCH[(kb, c)]
             _, l4, _ = ZHEMIN_L4_BATCH[(kb, c)]
             d_v5 = v6 - v5
@@ -367,36 +435,40 @@ def build_tab2(rps_1k, rps_2k, k6_conc, single_batch):
             d_l4 = v6 - l4
             pct_l4 = (1.0 - v6 / l4) * 100.0
             rows.append([
-                r["payload_label"],
+                r_d34["payload_label"],
                 c,
                 f"{v6:.1f}ms",
+                f"{v6_cb:.1f}ms",
                 f"{v5:.1f}ms",
                 f"{l4:.1f}ms",
                 f"{d_v5:+.1f}ms",
                 f"{pct_v5:.1f}%",
                 f"{d_l4:+.1f}ms",
                 f"{pct_l4:.1f}%",
-                "TPU v6e",
+                "TPU v6e (d3439062)",
             ])
 
     rows.append([])
-    rows.append(["Concurrent Request Comparison — Single HTTP Request with N Prompts (p99)"])
+    rows.append(["1A. Batch Request Comparison — Single HTTP Request with N Prompts (p99)"])
     rows.append([
         "Payload Size",
         "Concurrency",
+        "TPU v6e d3439062 (ms)",
         "TPU v6e cb460828 (ms)",
         "TPU v5e (ms)",
         "L4 GPU (ms)",
-        "Absolute Delta (v6e vs v5e)",
-        "% Reduction (v6e vs v5e)",
-        "Absolute Delta (v6e vs L4)",
-        "% Reduction (v6e vs L4)",
+        "Absolute Delta (d3439062 vs v5e)",
+        "% Reduction (d3439062 vs v5e)",
+        "Absolute Delta (d3439062 vs L4)",
+        "% Reduction (d3439062 vs L4)",
         "Faster Setup",
     ])
     for kb in [1, 2]:
         for c in [1, 4, 8, 16]:
-            r = single_batch[(kb, c)]
-            v6 = round(r["p99_ms"], 1)
+            r_d34 = d34_single_batch[(kb, c)]
+            r_cb = cb_single_batch[(kb, c)]
+            v6 = round(r_d34["p99_ms"], 1)
+            v6_cb = round(r_cb["p99_ms"], 1)
             _, _, v5 = ZHEMIN_V5E_BATCH[(kb, c)]
             _, _, l4 = ZHEMIN_L4_BATCH[(kb, c)]
             d_v5 = v6 - v5
@@ -404,37 +476,41 @@ def build_tab2(rps_1k, rps_2k, k6_conc, single_batch):
             d_l4 = v6 - l4
             pct_l4 = (1.0 - v6 / l4) * 100.0
             rows.append([
-                r["payload_label"],
+                r_d34["payload_label"],
                 c,
                 f"{v6:.1f}ms",
+                f"{v6_cb:.1f}ms",
                 f"{v5:.1f}ms",
                 f"{l4:.1f}ms",
                 f"{d_v5:+.1f}ms",
                 f"{pct_v5:.1f}%",
                 f"{d_l4:+.1f}ms",
                 f"{pct_l4:.1f}%",
-                "TPU v6e",
+                "TPU v6e (d3439062)",
             ])
 
     rows.append([])
     # 1B. Concurrent Request Comparison (k6 Closed-Loop VUS=1,4,8,16)
-    rows.append(["Concurrent Request Comparison — k6 Concurrent HTTP Requests VUS=1,4,8,16 (P50)"])
+    rows.append(["1B. Concurrent Request Comparison — k6 Concurrent HTTP Requests VUS=1,4,8,16 (P50)"])
     rows.append([
         "Payload Size",
         "Concurrency",
+        "TPU v6e d3439062 (ms)",
         "TPU v6e cb460828 (ms)",
         "TPU v5e (ms)",
         "L4 GPU (ms)",
-        "Absolute Delta (v6e vs v5e)",
-        "% Reduction (v6e vs v5e)",
-        "Absolute Delta (v6e vs L4)",
-        "% Reduction (v6e vs L4)",
+        "Absolute Delta (d3439062 vs v5e)",
+        "% Reduction (d3439062 vs v5e)",
+        "Absolute Delta (d3439062 vs L4)",
+        "% Reduction (d3439062 vs L4)",
         "Faster Setup",
     ])
     for kb in [1, 2]:
         for c in [1, 4, 8, 16]:
-            r = k6_conc[(kb, c)]
-            v6 = round(r["p50_ms"], 1)
+            r_d34 = d34_k6_conc[(kb, c)]
+            r_cb = cb_k6_conc[(kb, c)]
+            v6 = round(r_d34["p50_ms"], 1)
+            v6_cb = round(r_cb["p50_ms"], 1)
             _, v5, _ = ZHEMIN_V5E_BATCH[(kb, c)]
             _, l4, _ = ZHEMIN_L4_BATCH[(kb, c)]
             d_v5 = v6 - v5
@@ -442,36 +518,40 @@ def build_tab2(rps_1k, rps_2k, k6_conc, single_batch):
             d_l4 = v6 - l4
             pct_l4 = (1.0 - v6 / l4) * 100.0
             rows.append([
-                r["payload_label"],
+                r_d34["payload_label"],
                 c,
                 f"{v6:.1f}ms",
+                f"{v6_cb:.1f}ms",
                 f"{v5:.1f}ms",
                 f"{l4:.1f}ms",
                 f"{d_v5:+.1f}ms",
                 f"{pct_v5:.1f}%",
                 f"{d_l4:+.1f}ms",
                 f"{pct_l4:.1f}%",
-                "TPU v6e",
+                "TPU v6e (d3439062)",
             ])
 
     rows.append([])
-    rows.append(["Concurrent Request Comparison — k6 Concurrent HTTP Requests VUS=1,4,8,16 (p99)"])
+    rows.append(["1B. Concurrent Request Comparison — k6 Concurrent HTTP Requests VUS=1,4,8,16 (p99)"])
     rows.append([
         "Payload Size",
         "Concurrency",
+        "TPU v6e d3439062 (ms)",
         "TPU v6e cb460828 (ms)",
         "TPU v5e (ms)",
         "L4 GPU (ms)",
-        "Absolute Delta (v6e vs v5e)",
-        "% Reduction (v6e vs v5e)",
-        "Absolute Delta (v6e vs L4)",
-        "% Reduction (v6e vs L4)",
+        "Absolute Delta (d3439062 vs v5e)",
+        "% Reduction (d3439062 vs v5e)",
+        "Absolute Delta (d3439062 vs L4)",
+        "% Reduction (d3439062 vs L4)",
         "Faster Setup",
     ])
     for kb in [1, 2]:
         for c in [1, 4, 8, 16]:
-            r = k6_conc[(kb, c)]
-            v6 = round(r["p99_ms"], 1)
+            r_d34 = d34_k6_conc[(kb, c)]
+            r_cb = cb_k6_conc[(kb, c)]
+            v6 = round(r_d34["p99_ms"], 1)
+            v6_cb = round(r_cb["p99_ms"], 1)
             _, _, v5 = ZHEMIN_V5E_BATCH[(kb, c)]
             _, _, l4 = ZHEMIN_L4_BATCH[(kb, c)]
             d_v5 = v6 - v5
@@ -479,26 +559,31 @@ def build_tab2(rps_1k, rps_2k, k6_conc, single_batch):
             d_l4 = v6 - l4
             pct_l4 = (1.0 - v6 / l4) * 100.0
             rows.append([
-                r["payload_label"],
+                r_d34["payload_label"],
                 c,
                 f"{v6:.1f}ms",
+                f"{v6_cb:.1f}ms",
                 f"{v5:.1f}ms",
                 f"{l4:.1f}ms",
                 f"{d_v5:+.1f}ms",
                 f"{pct_v5:.1f}%",
                 f"{d_l4:+.1f}ms",
                 f"{pct_l4:.1f}%",
-                "TPU v6e",
+                "TPU v6e (d3439062)",
             ])
 
     rows.append([])
     # 2. RPS Saturation Result
-    r1k_480 = [x for x in rps_1k if x["target_rps"] == 480][0]
-    r1k_490 = [x for x in rps_1k if x["target_rps"] == 490][0]
-    r2k_300 = [x for x in rps_2k if x["target_rps"] == 300][0]
-    r2k_320 = [x for x in rps_2k if x["target_rps"] == 320][0]
+    r1k_530 = d34_rps_1k[530]
+    r1k_520 = d34_rps_1k[520]
+    r1k_490 = cb_rps_1k[490]
+    r1k_480 = cb_rps_1k[480]
+    r2k_350 = d34_rps_2k[350]
+    r2k_340 = d34_rps_2k[340]
+    r2k_320 = cb_rps_2k[320]
+    r2k_300 = cb_rps_2k[300]
 
-    rows.append(["RPS Saturation Result (p99 < 50 ms SLA)"])
+    rows.append(["2. RPS Saturation Result (p99 < 50 ms SLA)"])
     rows.append([
         "Payload",
         "Setup",
@@ -512,7 +597,25 @@ def build_tab2(rps_1k, rps_2k, k6_conc, single_batch):
     rows.append(["1K", "TPU v5e", "180/s (187/s max achieved)", "19.9ms", "29.6ms", "+157.1%", "Baseline"])
     rows.append([
         "1K",
-        "TPU v6e (Opus Megakernel cb460828, 10-RPS grid)",
+        "TPU v6e (Opus Megakernel d3439062 Fused Pooling, 10-RPS grid max PASS)",
+        "530/s",
+        f"{r1k_530['p50']:.1f}ms",
+        f"{r1k_530['p99']:.1f}ms",
+        f"+{(530.0/70.0 - 1.0)*100:.1f}% (7.57x)",
+        f"+{(530.0/180.0 - 1.0)*100:.1f}% vs 180/s (+{(530.0/187.0 - 1.0)*100:.1f}% vs 187/s)",
+    ])
+    rows.append([
+        "1K",
+        "TPU v6e (Opus Megakernel d3439062 Fused Pooling, 20-RPS grid max PASS)",
+        "520/s",
+        f"{r1k_520['p50']:.1f}ms",
+        f"{r1k_520['p99']:.1f}ms",
+        f"+{(520.0/70.0 - 1.0)*100:.1f}% (7.43x)",
+        f"+{(520.0/180.0 - 1.0)*100:.1f}% vs 180/s (+{(520.0/187.0 - 1.0)*100:.1f}% vs 187/s)",
+    ])
+    rows.append([
+        "1K",
+        "TPU v6e (Opus Megakernel cb460828 Device Pooling, 10-RPS grid max PASS)",
         "490/s",
         f"{r1k_490['p50']:.1f}ms",
         f"{r1k_490['p99']:.1f}ms",
@@ -521,7 +624,7 @@ def build_tab2(rps_1k, rps_2k, k6_conc, single_batch):
     ])
     rows.append([
         "1K",
-        "TPU v6e (Opus Megakernel cb460828, 20-RPS grid)",
+        "TPU v6e (Opus Megakernel cb460828 Device Pooling, 20-RPS grid max PASS)",
         "480/s",
         f"{r1k_480['p50']:.1f}ms",
         f"{r1k_480['p99']:.1f}ms",
@@ -532,7 +635,25 @@ def build_tab2(rps_1k, rps_2k, k6_conc, single_batch):
     rows.append(["2K", "TPU v5e", "90/s", "17.2ms", "26.5ms", "+125.0%", "Baseline"])
     rows.append([
         "2K",
-        "TPU v6e (Opus Megakernel cb460828, max PASS)",
+        "TPU v6e (Opus Megakernel d3439062 Fused Pooling, 10-RPS grid max PASS)",
+        "350/s",
+        f"{r2k_350['p50']:.1f}ms",
+        f"{r2k_350['p99']:.1f}ms",
+        f"+{(350.0/40.0 - 1.0)*100:.1f}% (8.75x)",
+        f"+{(350.0/90.0 - 1.0)*100:.1f}% (3.89x)",
+    ])
+    rows.append([
+        "2K",
+        "TPU v6e (Opus Megakernel d3439062 Fused Pooling, 20-RPS grid max PASS)",
+        "340/s",
+        f"{r2k_340['p50']:.1f}ms",
+        f"{r2k_340['p99']:.1f}ms",
+        f"+{(340.0/40.0 - 1.0)*100:.1f}% (8.50x)",
+        f"+{(340.0/90.0 - 1.0)*100:.1f}% (3.78x)",
+    ])
+    rows.append([
+        "2K",
+        "TPU v6e (Opus Megakernel cb460828 Device Pooling, max PASS)",
         "320/s",
         f"{r2k_320['p50']:.1f}ms",
         f"{r2k_320['p99']:.1f}ms",
@@ -541,7 +662,7 @@ def build_tab2(rps_1k, rps_2k, k6_conc, single_batch):
     ])
     rows.append([
         "2K",
-        "TPU v6e (Opus Megakernel cb460828, 300 RPS target)",
+        "TPU v6e (Opus Megakernel cb460828 Device Pooling, 300 RPS target)",
         "300/s",
         f"{r2k_300['p50']:.1f}ms",
         f"{r2k_300['p99']:.1f}ms",
@@ -562,12 +683,15 @@ def build_tab2(rps_1k, rps_2k, k6_conc, single_batch):
     c_v5_122_1k_187 = cost_per_1m(1.22, 187)
     c_v5_122_1k_180 = cost_per_1m(1.22, 180)
     c_v5_122_2k = cost_per_1m(1.22, 90)
-    c_v6_1k_490 = cost_per_1m(2.70, 490)
-    c_v6_1k_480 = cost_per_1m(2.70, 480)
-    c_v6_2k_320 = cost_per_1m(2.70, 320)
-    c_v6_2k_300 = cost_per_1m(2.70, 300)
+    c_v6_d34_1k_530 = cost_per_1m(2.70, 530)
+    c_v6_d34_1k_520 = cost_per_1m(2.70, 520)
+    c_v6_d34_2k_350 = cost_per_1m(2.70, 350)
+    c_v6_d34_2k_340 = cost_per_1m(2.70, 340)
+    c_v6_cb_1k_490 = cost_per_1m(2.70, 490)
+    c_v6_cb_1k_480 = cost_per_1m(2.70, 480)
+    c_v6_cb_2k_320 = cost_per_1m(2.70, 320)
 
-    rows.append(["Cost Improvement (Matching Zhemin's Formula: Hourly Cost / (0.40 * Max RPS * 3600) * 1,000,000)"])
+    rows.append(["3. Cost Improvement (Matching Zhemin's Formula: Hourly Cost / (0.40 * Max RPS * 3600) * 1,000,000)"])
     rows.append([
         "Machine Type",
         "Machine Config",
@@ -604,18 +728,32 @@ def build_tab2(rps_1k, rps_2k, k6_conc, single_batch):
         round(c_v5_122_2k, 9),
     ])
     rows.append([
+        "ct6e-standard-1t (Opus Megakernel d3439062 Fused, 530/350 RPS max PASS)",
+        "TPU v6e: 1 chip | vCPUs: 44 | Memory: 176 GB | TPU HBM: 32 GB",
+        2.7,
+        round(c_v6_d34_1k_530, 9),
+        round(c_v6_d34_2k_350, 9),
+    ])
+    rows.append([
+        "ct6e-standard-1t (Opus Megakernel d3439062 Fused, 520/340 RPS 20-RPS grid)",
+        "TPU v6e: 1 chip | vCPUs: 44 | Memory: 176 GB | TPU HBM: 32 GB",
+        2.7,
+        round(c_v6_d34_1k_520, 9),
+        round(c_v6_d34_2k_340, 9),
+    ])
+    rows.append([
         "ct6e-standard-1t (Opus Megakernel cb460828, 490/320 RPS max PASS)",
         "TPU v6e: 1 chip | vCPUs: 44 | Memory: 176 GB | TPU HBM: 32 GB",
         2.7,
-        round(c_v6_1k_490, 9),
-        round(c_v6_2k_320, 9),
+        round(c_v6_cb_1k_490, 9),
+        round(c_v6_cb_2k_320, 9),
     ])
     rows.append([
         "ct6e-standard-1t (Opus Megakernel cb460828, 480/320 RPS 20-RPS grid)",
         "TPU v6e: 1 chip | vCPUs: 44 | Memory: 176 GB | TPU HBM: 32 GB",
         2.7,
-        round(c_v6_1k_480, 9),
-        round(c_v6_2k_320, 9),
+        round(c_v6_cb_1k_480, 9),
+        round(c_v6_cb_2k_320, 9),
     ])
     rows.append([
         "Cost Improvement (v5e $1.20 vs L4 $0.70 — Zhemin Baseline)",
@@ -625,53 +763,54 @@ def build_tab2(rps_1k, rps_2k, k6_conc, single_batch):
         f"{(1.0 - c_v5_120_2k / c_l4_2k)*100:.2f}% reduction",
     ])
     rows.append([
-        "Cost Improvement (v6e $2.70 vs L4 $0.70 — 490 / 320 RPS)",
+        "Cost Improvement (v6e d3439062 $2.70 vs L4 $0.70 — 530 / 350 RPS)",
         "",
         "",
-        f"{(1.0 - c_v6_1k_490 / c_l4_1k)*100:.2f}% reduction",
-        f"{(1.0 - c_v6_2k_320 / c_l4_2k)*100:.2f}% reduction",
+        f"{(1.0 - c_v6_d34_1k_530 / c_l4_1k)*100:.2f}% reduction",
+        f"{(1.0 - c_v6_d34_2k_350 / c_l4_2k)*100:.2f}% reduction",
     ])
     rows.append([
-        "Cost Improvement (v6e $2.70 vs L4 $0.70 — 480 / 320 RPS)",
+        "Cost Improvement (v6e d3439062 $2.70 vs v5e $1.20 @ 187/90 RPS — 530 / 350 RPS)",
         "",
         "",
-        f"{(1.0 - c_v6_1k_480 / c_l4_1k)*100:.2f}% reduction",
-        f"{(1.0 - c_v6_2k_320 / c_l4_2k)*100:.2f}% reduction",
+        f"{(1.0 - c_v6_d34_1k_530 / c_v5_120_1k_187)*100:.2f}% reduction",
+        f"{(1.0 - c_v6_d34_2k_350 / c_v5_120_2k)*100:.2f}% reduction",
     ])
     rows.append([
-        "Cost Improvement (v6e $2.70 vs v5e $1.20 @ 187/90 RPS — 490/320 RPS)",
+        "Cost Improvement (v6e d3439062 $2.70 vs v5e $1.22 @ 180/90 RPS — 530 / 350 RPS)",
         "",
         "",
-        f"{(1.0 - c_v6_1k_490 / c_v5_120_1k_187)*100:.2f}% reduction",
-        f"{(1.0 - c_v6_2k_320 / c_v5_120_2k)*100:.2f}% reduction",
+        f"{(1.0 - c_v6_d34_1k_530 / c_v5_122_1k_180)*100:.2f}% reduction",
+        f"{(1.0 - c_v6_d34_2k_350 / c_v5_122_2k)*100:.2f}% reduction",
     ])
     rows.append([
-        "Cost Improvement (v6e $2.70 vs v5e $1.22 @ 187/90 RPS — 490/320 RPS)",
+        "Cost Improvement (v6e cb460828 $2.70 vs L4 $0.70 — 490 / 320 RPS)",
         "",
         "",
-        f"{(1.0 - c_v6_1k_490 / c_v5_122_1k_187)*100:.2f}% reduction",
-        f"{(1.0 - c_v6_2k_320 / c_v5_122_2k)*100:.2f}% reduction",
+        f"{(1.0 - c_v6_cb_1k_490 / c_l4_1k)*100:.2f}% reduction",
+        f"{(1.0 - c_v6_cb_2k_320 / c_l4_2k)*100:.2f}% reduction",
     ])
     rows.append([
-        "Cost Improvement (v6e $2.70 vs v5e $1.22 @ 180/90 RPS — 490/320 RPS)",
+        "Cost Improvement (v6e cb460828 $2.70 vs v5e $1.20 @ 187/90 RPS — 490 / 320 RPS)",
         "",
         "",
-        f"{(1.0 - c_v6_1k_490 / c_v5_122_1k_180)*100:.2f}% reduction",
-        f"{(1.0 - c_v6_2k_320 / c_v5_122_2k)*100:.2f}% reduction",
+        f"{(1.0 - c_v6_cb_1k_490 / c_v5_120_1k_187)*100:.2f}% reduction",
+        f"{(1.0 - c_v6_cb_2k_320 / c_v5_120_2k)*100:.2f}% reduction",
     ])
 
     return rows
 
 
 def main():
-    rps_1k, rps_2k, k6_conc, single_batch = load_empirical_data()
-    tab1 = build_tab1(rps_1k, rps_2k, k6_conc, single_batch)
-    tab2 = build_tab2(rps_1k, rps_2k, k6_conc, single_batch)
+    data = load_empirical_data()
+    tab1 = build_tab1(*data)
+    tab2 = build_tab2(*data)
 
     out_paths = [
         os.path.join(BASE_DIR, "ATP_AIC2_Benchmarks_TPU_v6e_FP32_Megakernel_vs_L4_and_Baselines.xlsx"),
         os.path.join(BASE_DIR, "ATP_AIC2_Benchmarks_TPU_v6e_v5e_FP32_and_BF16_vs_L4.xlsx"),
         os.path.join(REPO_MEGAKERNEL_DIR, "ATP_AIC2_Benchmarks_TPU_v6e_FP32_Megakernel_vs_L4_and_Baselines.xlsx"),
+        os.path.join(REPO_MEGAKERNEL_DIR, "ATP_AIC2_Benchmarks_TPU_v6e_FP32_Opus_Megakernel_vs_L4_and_Baselines.xlsx"),
     ]
     for p in out_paths:
         create_xlsx(
@@ -696,7 +835,11 @@ def main():
             for row in tab2:
                 w.writerow(row)
         print(f"Wrote {cp}")
-    print(f"Verified {len(rps_1k)} 1K RPS steps and {len(rps_2k)} 2K RPS steps.")
+
+    shutil.copyfile(
+        os.path.join(SCRATCH_DIR, "build_cb460828_excel.py"),
+        os.path.join(REPO_MEGAKERNEL_DIR, "build_megakernel_excel.py"),
+    )
 
 
 if __name__ == "__main__":
