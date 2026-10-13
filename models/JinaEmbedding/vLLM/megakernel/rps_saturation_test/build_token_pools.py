@@ -17,7 +17,6 @@ import random
 import statistics
 import sys
 
-os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 from transformers import AutoTokenizer  # noqa: E402
 
@@ -30,7 +29,10 @@ _TOKENIZER = None
 def tokenizer():
     global _TOKENIZER
     if _TOKENIZER is None:
-        _TOKENIZER = AutoTokenizer.from_pretrained(MODEL)
+        try:
+            _TOKENIZER = AutoTokenizer.from_pretrained(MODEL, local_files_only=True)
+        except Exception:
+            _TOKENIZER = AutoTokenizer.from_pretrained(MODEL)
     return _TOKENIZER
 
 

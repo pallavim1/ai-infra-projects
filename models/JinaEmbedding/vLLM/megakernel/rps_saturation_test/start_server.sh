@@ -13,6 +13,9 @@ export JINA_BERT_MEGAKERNEL_PRECISION=default
 export TPU_POOLING_FAST_PATH=1
 export JINA_BERT_DEVICE_POOLING=1
 
+echo "[0/2] Applying idempotent JinaBert transformers v5 + vLLM ModelRegistry shims (setup_jina_env.py)..."
+python3 "${SCRIPT_DIR}/setup_jina_env.py"
+
 echo "[1/2] Starting /prompt_c2 adapter proxy on :8000 (logs: ${LOG_DIR}/proxy.log)..."
 python3 "${SCRIPT_DIR}/stock_adapter_proxy.py" 8000 > "${LOG_DIR}/proxy.log" 2>&1 &
 PROXY_PID=$!
